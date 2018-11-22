@@ -21,7 +21,6 @@ func main() {
 	timer.Get()
 	playerID.Get()
 	playerName.Get()
-	replayPlayerName.Get()
 	totalGems.Get()
 	daggersFired.Get()
 	daggersHit.Get()
@@ -31,7 +30,10 @@ func main() {
 	isAlive.Get()
 	isReplay.Get()
 
-	replayPlayerID.Get()
+	if isReplay.GetVariable().(bool) {
+		replayPlayerName.Get()
+		replayPlayerID.Get()
+	}
 
 	fmt.Printf("homing: %v\n", homing.GetVariable())
 	fmt.Printf("gems: %v\n", gems.GetVariable())
@@ -50,5 +52,5 @@ func main() {
 	fmt.Printf("isAlive: %v\n", isAlive.GetVariable())
 	fmt.Printf("isReplay: %v\n", isReplay.GetVariable())
 
-	fmt.Scan()
+	fmt.Scanln()
 }
