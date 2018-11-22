@@ -95,7 +95,14 @@ func getValue(i interface{}, p address) {
 			log.Fatalf("Error getting int from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toString(buf))
-		reflect.ValueOf(i).Elem().Set(vbuf)
+		if reflect.Indirect(reflect.ValueOf(i)).Elem().String() == "XXXXXX" {
+			reflect.ValueOf(i).Elem().Set(vbuf)
+			var id int
+			fmt.Sscanln(fmt.Sprint(reflect.ValueOf(vbuf)), &id)
+			reflect.ValueOf(i).Elem().Set(reflect.ValueOf(id))
+		} else {
+			reflect.ValueOf(i).Elem().Set(vbuf)
+		}
 	}
 }
 

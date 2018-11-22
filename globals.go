@@ -21,6 +21,10 @@ func (gv *gameVariable) Get() {
 	getValue(&gv.variable, pointer+gv.offsets[len(gv.offsets)-1])
 }
 
+func (gv *gameVariable) GetVariable() interface{} {
+	return gv.variable
+}
+
 type gameStringVariable struct {
 	lengthVariable gameVariable
 	stringVariable gameVariable
@@ -33,6 +37,25 @@ func (gsv *gameStringVariable) Get() {
 	gsv.stringVariable.variable = string(make([]byte, size.(int)))
 	gsv.stringVariable.Get()
 	gsv.variable = gsv.stringVariable.variable.(string)
+}
+
+func (gsv *gameStringVariable) GetVariable() interface{} {
+	return gsv.variable
+}
+
+type gameReplayIDVariable struct {
+	replayIDVariable gameVariable
+	variable         int
+}
+
+func (gridv *gameReplayIDVariable) GetVariable() interface{} {
+	return gridv.variable
+}
+
+func (gridv *gameReplayIDVariable) Get() {
+	gridv.replayIDVariable.Get()
+	gridv.variable = gridv.replayIDVariable.variable.(int)
+	gridv.replayIDVariable.variable = "XXXXXX"
 }
 
 const (
@@ -74,4 +97,6 @@ var (
 	gems   = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x218}, variable: 0}
 )
 
-var replayPlayerID = gameVariable{parentOffset: 0x001F80B0, offsets: []address{0x0, 0x18, 0xC, 0x4642}, variable: "          "}
+var replayPlayerID = gameReplayIDVariable{
+	replayIDVariable: gameVariable{parentOffset: 0x001F80B0, offsets: []address{0x0, 0x18, 0xC, 0x4642}, variable: "XXXXXX"},
+}
