@@ -11,8 +11,10 @@ const (
 )
 
 var (
-	handle         w32.HANDLE
-	exeBaseAddress address
+	handle           w32.HANDLE
+	exeBaseAddress   address
+	exeFilePath      string
+	survivalFilePath string
 )
 
 var (

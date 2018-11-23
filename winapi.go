@@ -26,13 +26,15 @@ func getHandle() (w32.HANDLE, error) {
 		return 0, errors.New("could not open process Devil Daggers")
 	}
 
-	exeBaseAddress = getModuleBaseAddress(pid)
+	exeBaseAddress, exeFilePath = getModuleInfo(pid)
+	survivalFilePath = exeFilePath[0:len(exeFilePath)-4] + "\\survival"
 
 	return handle, nil
 }
 
-func getModuleBaseAddress(pid int) address {
+func getModuleInfo(pid int) (address, string) {
 	var baseAddress uintptr
+	var exePath string
 
 	snapshot := w32.CreateToolhelp32Snapshot(w32.TH32CS_SNAPMODULE|w32.TH32CS_SNAPMODULE32, uint32(pid))
 	if snapshot != w32.ERROR_INVALID_HANDLE {
@@ -40,11 +42,12 @@ func getModuleBaseAddress(pid int) address {
 		me.Size = uint32(unsafe.Sizeof(me))
 		if w32.Module32First(snapshot, &me) {
 			baseAddress = uintptr(unsafe.Pointer(me.ModBaseAddr))
+			exePath = syscall.UTF16ToString(me.SzExePath[:])
 		}
 	}
 	defer w32.CloseHandle(snapshot)
 
-	return address(baseAddress)
+	return address(baseAddress), exePath
 }
 
 func getAddressFrom(p address) address {
@@ -73,7 +76,7 @@ func getValue(i interface{}, p address) {
 		}
 		vbuf := reflect.ValueOf(toInt(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
-	case "float64", "float32":
+	case "float32", "float64":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
 			log.Fatalf("Error getting int from 0x%x.\n", p)
