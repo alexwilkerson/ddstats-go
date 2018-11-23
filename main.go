@@ -38,9 +38,13 @@ func main() {
 	fmt.Println(exeFilePath)
 	fmt.Println(survivalFilePath)
 
+	fmt.Println()
+
 	fmt.Printf("homing: %v (%T)\n", homing.GetVariable(), homing.GetVariable())
 	fmt.Printf("gems: %v (%T)\n", gems.GetVariable(), gems.GetVariable())
+
 	fmt.Println()
+
 	fmt.Printf("timer: %v (%T)\n", timer.GetVariable(), timer.GetVariable())
 	fmt.Printf("playerID: %v (%T)\n", playerID.GetVariable(), playerID.GetVariable())
 	fmt.Printf("playerName: %v (%T)\n", playerName.GetVariable(), playerName.GetVariable())
