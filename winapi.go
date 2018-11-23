@@ -73,7 +73,7 @@ func getValue(i interface{}, p address) {
 		}
 		vbuf := reflect.ValueOf(toInt(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
-	case "float64":
+	case "float64", "float32":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
 			log.Fatalf("Error getting int from 0x%x.\n", p)

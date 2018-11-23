@@ -14,6 +14,7 @@ var (
 	handle         w32.HANDLE
 	exeBaseAddress address
 )
+
 var (
 	playerName = gameStringVariable{
 		lengthVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x70}, variable: 0},

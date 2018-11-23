@@ -1,5 +1,9 @@
 package main
 
+import (
+	"unicode/utf8"
+)
+
 type address uintptr
 
 type gameVariable struct {
@@ -15,6 +19,22 @@ func (gv *gameVariable) Get() {
 		getValue(&pointer, pointer+gv.offsets[i])
 	}
 	getValue(&gv.variable, pointer+gv.offsets[len(gv.offsets)-1])
+	switch gv.variable.(type) {
+	case int:
+		gv.variable = int(gv.variable.(int))
+	case float32:
+		gv.variable = float32(gv.variable.(float32))
+	case float64:
+		gv.variable = float64(gv.variable.(float64))
+	case bool:
+		gv.variable = bool(gv.variable.(bool))
+	case string:
+		gv.variable = string(gv.variable.(string))
+	case address:
+		gv.variable = address(gv.variable.(address))
+	case uintptr:
+		gv.variable = uintptr(gv.variable.(uintptr))
+	}
 }
 
 func (gv *gameVariable) GetVariable() interface{} {
@@ -32,11 +52,18 @@ func (gsv *gameStringVariable) Get() {
 	size := gsv.lengthVariable.variable
 	gsv.stringVariable.variable = string(make([]byte, size.(int)))
 	gsv.stringVariable.Get()
-	gsv.variable = gsv.stringVariable.variable.(string)
+	for !utf8.Valid([]byte(gsv.stringVariable.variable.(string))) {
+		gsv.stringVariable.variable = string(make([]byte, size.(int)))
+		gsv.stringVariable.offsets = append(gsv.stringVariable.offsets, 0x0)
+		gsv.stringVariable.Get()
+	}
+	gsv.variable = gsv.stringVariable.variable.(string)[:size.(int)]
+	gsv.lengthVariable.variable = 0
+	gsv.stringVariable.variable = ""
 }
 
 func (gsv *gameStringVariable) GetVariable() interface{} {
-	return gsv.variable
+	return string(gsv.variable)
 }
 
 type gameReplayIDVariable struct {
@@ -45,7 +72,7 @@ type gameReplayIDVariable struct {
 }
 
 func (gridv *gameReplayIDVariable) GetVariable() interface{} {
-	return gridv.variable
+	return int(gridv.variable)
 }
 
 func (gridv *gameReplayIDVariable) Get() {
