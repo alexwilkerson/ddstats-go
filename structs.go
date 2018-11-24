@@ -38,7 +38,6 @@ func (gv *gameVariable) GetVariable() interface{} {
 }
 
 type gameStringVariable struct {
-	lengthVariable gameVariable
 	stringVariable gameVariable
 	variable       string
 }
@@ -48,23 +47,25 @@ type gameStringVariable struct {
 // if maxSize is 31 the char array holds the address of where the new
 // string is stored. the offset of the maxSize is always 0x14.
 func (gsv *gameStringVariable) Get() {
-	maxSizeOffset := gsv.stringVariable.offsets[0] + 0x14
-	maxSize := gameVariable{parentOffset: gameStatsAddress, offsets: []address{maxSizeOffset}, variable: 0}
-	maxSize.Get()
-	gsv.lengthVariable.Get()
-	length := gsv.lengthVariable.variable
+	lengthOffset := gsv.stringVariable.offsets[0] + 0x10
+	lengthVariable := gameVariable{parentOffset: gameStatsAddress, offsets: []address{lengthOffset}, variable: 0}
+	lengthVariable.Get()
+	length := lengthVariable.variable
 
-	if maxSize.variable.(int) == 31 {
-		gsv.stringVariable.offsets = append(gsv.stringVariable.offsets, 0x0)
-	}
-	if maxSize.variable.(int) == 63 {
+	maxSizeOffset := gsv.stringVariable.offsets[0] + 0x14
+	maxSizeVariable := gameVariable{parentOffset: gameStatsAddress, offsets: []address{maxSizeOffset}, variable: 0}
+	maxSizeVariable.Get()
+	maxSize := maxSizeVariable.variable.(int)
+
+	iterations := ((maxSize + 1) / 16) - 1
+
+	for i := 0; i < iterations; i++ {
 		gsv.stringVariable.offsets = append(gsv.stringVariable.offsets, 0x0)
 	}
 	gsv.stringVariable.variable = string(make([]byte, length.(int)))
 	gsv.stringVariable.Get()
 
 	gsv.variable = gsv.stringVariable.variable.(string)[:length.(int)]
-	gsv.lengthVariable.variable = 0
 	gsv.stringVariable.variable = ""
 }
 

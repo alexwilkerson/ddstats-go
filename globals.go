@@ -19,11 +19,9 @@ var (
 
 var (
 	playerName = gameStringVariable{
-		lengthVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x70}, variable: 0},
 		stringVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x60}, variable: ""},
 	}
 	replayPlayerName = gameStringVariable{
-		lengthVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x370}, variable: 0},
 		stringVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x360}, variable: ""},
 	}
 )
