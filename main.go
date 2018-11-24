@@ -9,6 +9,23 @@ import (
 
 func main() {
 	var err error
+
+	// g, err := gocui.NewGui(gocui.OutputNormal)
+	// if err != nil {
+	// 	log.Panicln(err)
+	// }
+	// defer g.Close()
+
+	// g.SetManagerFunc(layout)
+
+	// if err := g.SetKeybinding("", gocui.KeyCtrlZ, gocui.ModNone, quit); err != nil {
+	// 	log.Panicln(err)
+	// }
+
+	// if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
+	// 	log.Panicln(err)
+	// }
+
 	handle, err = getHandle()
 	if err != nil {
 		log.Fatal(err)

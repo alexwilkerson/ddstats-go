@@ -118,7 +118,7 @@ func toString(b []uint16) string {
 }
 
 func toBool(b []uint16) bool {
-	return int(b[0]&0x1) != 0
+	return int(b[0]&0x0F) != 0
 }
 
 func toInt(b []uint16) int {
