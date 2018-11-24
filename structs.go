@@ -1,5 +1,7 @@
 package main
 
+import "math"
+
 type address uintptr
 
 type gameVariable struct {
@@ -57,7 +59,7 @@ func (gsv *gameStringVariable) Get() {
 	maxSizeVariable.Get()
 	maxSize := maxSizeVariable.variable.(int)
 
-	iterations := ((maxSize + 1) / 16) - 1
+	iterations := int(math.Log2(float64(maxSize)+1)) - 4
 
 	for i := 0; i < iterations; i++ {
 		gsv.stringVariable.offsets = append(gsv.stringVariable.offsets, 0x0)
