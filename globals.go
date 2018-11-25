@@ -5,6 +5,10 @@ import (
 )
 
 const (
+	version = "0.4.0"
+)
+
+const (
 	gameStatsAddress address = 0x001F30C0
 	// playerInfoAddress address = 0x001F7FD4 // is this even a thing?
 	gameAddress address = 0x001F8084
