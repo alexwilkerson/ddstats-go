@@ -1,0 +1,5 @@
+# This configuration file is used for the ddstats.exe program. It must
+# exist within the same directory as ddstats.exe.
+
+classic_mode = true
+stream_stats = true

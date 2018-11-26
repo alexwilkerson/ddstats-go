@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"log"
 	"math"
 	"reflect"
 	"syscall"
@@ -13,23 +11,29 @@ import (
 	"github.com/TheTitanrain/w32"
 )
 
-func getHandle() (w32.HANDLE, error) {
+func getHandle() {
+	var err error
 	hwnd := w32.FindWindowW(nil, syscall.StringToUTF16Ptr("Devil Daggers"))
 	if hwnd == 0 {
-		return 0, errors.New("could not find Devil Daggers")
+		handle = 0
+		attached = false
+		return
 	}
 
 	_, pid := w32.GetWindowThreadProcessId(hwnd)
 
-	handle, err := w32.OpenProcess(w32.PROCESS_ALL_ACCESS, false, uintptr(pid))
+	handle, err = w32.OpenProcess(w32.PROCESS_ALL_ACCESS, false, uintptr(pid))
 	if err != nil {
-		return 0, errors.New("could not open process Devil Daggers")
+		handle = 0
+		attached = false
+		return
 	}
 
 	exeBaseAddress, exeFilePath = getModuleInfo(pid)
-	survivalFilePath = exeFilePath[0:len(exeFilePath)-4] + "\\survival"
-
-	return handle, nil
+	if len(exeFilePath) > 4 {
+		survivalFilePath = exeFilePath[0:len(exeFilePath)-4] + "\\survival"
+	}
+	attached = true
 }
 
 func getModuleInfo(pid int) (address, string) {
@@ -53,7 +57,8 @@ func getModuleInfo(pid int) (address, string) {
 func getAddressFrom(p address) address {
 	buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 	if !ok {
-		log.Fatalf("Error getting address from 0x%x.\n", p)
+		return p
+		//log.Fatalf("Error getting address from 0x%x.\n", p)
 	}
 	return toAddress(buf)
 }
@@ -62,7 +67,8 @@ func getValue(i interface{}, p address) {
 	if reflect.TypeOf(i).String() == "*main.address" {
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
-			log.Fatalf("Error getting address from 0x%x.\n", p)
+			return
+			// log.Fatalf("Error getting address from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toAddress(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
@@ -72,21 +78,24 @@ func getValue(i interface{}, p address) {
 	case "int":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
-			log.Fatalf("Error getting int from 0x%x.\n", p)
+			return
+			// log.Fatalf("Error getting int from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toInt(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
 	case "float32", "float64":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
-			log.Fatalf("Error getting int from 0x%x.\n", p)
+			return
+			// log.Fatalf("Error getting int from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toFloat32(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
 	case "bool":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 1)
 		if !ok {
-			log.Fatalf("Error getting int from 0x%x.\n", p)
+			return
+			// log.Fatalf("Error getting int from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toBool(buf))
 		reflect.ValueOf(i).Elem().Set(vbuf)
@@ -94,7 +103,8 @@ func getValue(i interface{}, p address) {
 		sz := uintptr(len(reflect.Indirect(reflect.ValueOf(i)).Elem().String()))
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), sz)
 		if !ok {
-			log.Fatalf("Error getting int from 0x%x.\n", p)
+			return
+			// log.Fatalf("Error getting int from 0x%x.\n", p)
 		}
 		vbuf := reflect.ValueOf(toString(buf))
 		if reflect.Indirect(reflect.ValueOf(i)).Elem().String() == "XXXXXX" {

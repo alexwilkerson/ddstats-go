@@ -5,13 +5,19 @@ import (
 )
 
 const (
-	version = "0.4.0"
+	version    = "0.4.0"
+	captureFPS = 60
 )
 
 const (
 	gameStatsAddress address = 0x001F30C0
-	// playerInfoAddress address = 0x001F7FD4 // is this even a thing?
-	gameAddress address = 0x001F8084
+	gameAddress      address = 0x001F8084
+)
+
+var (
+	motd            string
+	validVersion    = true
+	updateAvailable bool
 )
 
 var (
@@ -19,6 +25,9 @@ var (
 	exeBaseAddress   address
 	exeFilePath      string
 	survivalFilePath string
+	attached         bool
+	gc               gameCapture
+	sd               statDisplay
 )
 
 var (
@@ -28,6 +37,12 @@ var (
 	replayPlayerName = gameStringVariable{
 		stringVariable: gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x360}, variable: ""},
 	}
+)
+
+var (
+	level2time float32
+	level3time float32
+	level4time float32
 )
 
 var (
