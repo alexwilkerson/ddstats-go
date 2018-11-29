@@ -1,3 +1,4 @@
+//go:generate goversioninfo -icon=icon.ico
 package main
 
 import (
@@ -5,6 +6,8 @@ import (
 )
 
 func main() {
+	setConsoleTitle("ddstats v" + version)
+
 	err := ui.Init()
 	if err != nil {
 		panic(err)

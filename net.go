@@ -20,8 +20,16 @@ func getMotd() {
 
 	json.NewDecoder(resp.Body).Decode(&result)
 
-	motd = result["motd"].(string)
-	validVersion = result["valid_version"].(bool)
-	updateAvailable = result["update_available"].(bool)
+	if v, ok := result["motd"]; ok {
+		motd = v.(string)
+	} else {
+		motd = "Error fetching MOTD."
+	}
+	if v, ok := result["valid_version"]; ok {
+		validVersion = v.(bool)
+	}
+	if v, ok := result["update_available"]; ok {
+		updateAvailable = v.(bool)
+	}
 
 }

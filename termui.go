@@ -154,6 +154,8 @@ func classicLayout() {
 		getHandle()
 		if handle != 0 {
 			gc.GetGameVariables()
+		} else {
+			gc.playerName = ""
 		}
 
 		timerString := fmt.Sprintf("In Game Timer: %.4fs", sd.timer)
