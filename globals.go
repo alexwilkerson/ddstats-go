@@ -5,8 +5,10 @@ import (
 )
 
 const (
-	version    = "0.4.0"
-	captureFPS = 60
+	version        = "0.4.0"
+	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
+	captureFPS     = 40
+	uiFPS          = 2
 )
 
 const (
@@ -27,9 +29,13 @@ const (
 )
 
 var (
-	motd            string
-	validVersion    = true
-	updateAvailable bool
+	debug              = debugLog{log: "[ddstats]\n\n"}
+	debugWindowVisible = false
+	motd               string
+	validVersion       = true
+	updateAvailable    bool
+	survivalHash       string
+	lastGameURL        = "None."
 )
 
 var (
@@ -38,7 +44,8 @@ var (
 	exeFilePath      string
 	survivalFilePath string
 	attached         bool
-	gc               gameCapture
+	gameCapture      GameCapture
+	gameRecording    GameRecording
 	sd               statDisplay
 )
 

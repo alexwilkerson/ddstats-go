@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -32,4 +33,38 @@ func getMotd() {
 		updateAvailable = v.(bool)
 	}
 
+}
+
+type whatever struct {
+	name string
+}
+
+func submitGame() {
+	jsonValue, err := json.Marshal(gameRecording)
+	if err != nil {
+		debug.Log(err)
+		return
+	}
+	debug.Log(string(jsonValue[:]))
+	debug.Log(gameRecording)
+	debug.Log("test")
+	resp, err := http.Post("http://ddstats.com/api/submit_game", "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		lastGameURL = "Error submitting game to server."
+		return
+	}
+
+	var result map[string]interface{}
+
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	debug.Log(result)
+
+	if v, ok := result["game_id"]; ok {
+		lastGameURL = fmt.Sprintf("https://ddstats.com/game_log/%v", v)
+	} else if v, ok := result["message"]; ok {
+		lastGameURL = v.(string)
+	} else {
+		lastGameURL = "No response received from server."
+	}
 }

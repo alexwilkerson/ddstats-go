@@ -18,6 +18,8 @@ func main() {
 
 	go getMotd()
 
+	go gameCapture.Run()
+
 	go classicLayout()
 
 	ui.Loop()

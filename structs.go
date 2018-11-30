@@ -1,6 +1,25 @@
 package main
 
-import "math"
+import (
+	"crypto/md5"
+	"fmt"
+	"io"
+	"math"
+	"os"
+	"time"
+)
+
+type debugLog struct {
+	log string
+}
+
+func (dl *debugLog) Log(i interface{}) {
+	dl.log += fmt.Sprintf("%v", i) + "\n"
+}
+
+func (dl *debugLog) Clear() {
+	dl.log = ""
+}
 
 type address uintptr
 
@@ -101,8 +120,122 @@ func (gridv *gameReplayIDVariable) Get() {
 	gridv.replayIDVariable.variable = "XXXXXX"
 }
 
-type gameCapture struct {
+type GameRecording struct {
+	PlayerID            int       `json:"playerID"`
+	PlayerName          string    `json:"playerName"`
+	Granularity         int       `json:"granularity"`
+	Timer               float32   `json:"inGameTimer"`
+	TimerSlice          []float32 `json:"inGameTimerVector"`
+	TotalGems           int       `json:"gems"`
+	TotalGemsSlice      []int     `json:"gemsVector"`
+	Level2time          float32   `json:"levelTwoTime"`
+	Level3time          float32   `json:"levelThreeTime"`
+	Level4time          float32   `json:"levelFourTime"`
+	Homing              int       `json:"homingDaggers"`
+	HomingSlice         []int     `json:"homingDaggersVector"`
+	HomingMax           int       `json:"homingDaggersMax"`
+	HomingMaxTime       float32   `json:"homingDaggersMaxTime"`
+	DaggersFired        int       `json:"daggersFired"`
+	DaggersFiredSlice   []int     `json:"daggersFiredVector"`
+	DaggersHit          int       `json:"daggersHit"`
+	DaggersHitSlice     []int     `json:"daggersHitVector"`
+	EnemiesAlive        int       `json:"enemiesAlive"`
+	EnemiesAliveSlice   []int     `json:"enemiesAliveVector"`
+	EnemiesAliveMax     int       `json:"enemiesAliveMax"`
+	EnemiesAliveMaxTime float32   `json:"enemiesAliveMaxTime"`
+	EnemiesKilled       int       `json:"enemiesKilled"`
+	EnemiesKilledSlice  []int     `json:"enemiesKilledVector"`
+	DeathType           int       `json:"deathType"`
+	ReplayPlayerID      int       `json:"replayPlayerID"`
+	Version             string    `json:"version"`
+	SurvivalHash        string    `json:"survivalHash"`
+}
+
+func (gr *GameRecording) RecordVariables() {
+	gr.TimerSlice = append(gr.TimerSlice, gameCapture.timer)
+	gr.TotalGemsSlice = append(gr.TotalGemsSlice, gameCapture.totalGems)
+	gr.HomingSlice = append(gr.HomingSlice, gameCapture.homing)
+	gr.DaggersFiredSlice = append(gr.DaggersFiredSlice, gameCapture.daggersFired)
+	gr.DaggersHitSlice = append(gr.DaggersHitSlice, gameCapture.daggersHit)
+	gr.EnemiesAliveSlice = append(gr.EnemiesAliveSlice, gameCapture.enemiesAlive)
+	gr.EnemiesKilledSlice = append(gr.EnemiesKilledSlice, gameCapture.enemiesKilled)
+}
+
+func (gr *GameRecording) Stop() {
+	gr.PlayerID = gameCapture.playerID
+	gr.PlayerName = gameCapture.playerName
+	gr.Timer = gameCapture.timer
+	gr.TimerSlice = append(gr.TimerSlice, gameCapture.timer)
+	gr.TotalGems = gameCapture.totalGemsAtDeath
+	gr.TotalGemsSlice = append(gr.TotalGemsSlice, gameCapture.totalGemsAtDeath)
+	gr.Level2time = gameCapture.level2time
+	gr.Level3time = gameCapture.level3time
+	gr.Level4time = gameCapture.level4time
+	gr.Homing = gameCapture.homingAtDeath
+	gr.HomingSlice = append(gr.HomingSlice, gameCapture.homingAtDeath)
+	gr.HomingMax = gameCapture.homingMax
+	gr.HomingMaxTime = gameCapture.homingMaxTime
+	gr.DaggersFired = gameCapture.daggersFired
+	gr.DaggersFiredSlice = append(gr.DaggersFiredSlice, gameCapture.daggersFired)
+	gr.DaggersHit = gameCapture.daggersHit
+	gr.DaggersHitSlice = append(gr.DaggersHitSlice, gameCapture.daggersHit)
+	gr.EnemiesAlive = gameCapture.enemiesAlive
+	gr.EnemiesAliveSlice = append(gr.EnemiesAliveSlice, gameCapture.enemiesAlive)
+	gr.EnemiesAliveMax = gameCapture.enemiesAliveMax
+	gr.EnemiesAliveMaxTime = gameCapture.enemiesAliveMaxTime
+	gr.EnemiesKilled = gameCapture.enemiesKilled
+	gr.EnemiesKilledSlice = append(gr.EnemiesKilledSlice, gameCapture.enemiesKilled)
+	gr.DeathType = gameCapture.deathType
+	gr.ReplayPlayerID = gameCapture.replayPlayerID
+	if gr.SurvivalHash == "" {
+		gameCapture.GetSurvivalHash()
+		gr.SurvivalHash = gameCapture.survivalHash
+	}
+}
+
+func (gr *GameRecording) Reset() {
+	gr.PlayerID = gameCapture.playerID
+	gr.PlayerName = gameCapture.playerName
+	gr.Granularity = 1
+	gr.Timer = -1.0
+	gr.TimerSlice = []float32{}
+	gr.TotalGems = 0
+	gr.TotalGemsSlice = []int{}
+	gr.Level2time = 0
+	gr.Level3time = 0
+	gr.Level4time = 0
+	gr.Homing = 0
+	gr.HomingSlice = []int{}
+	gr.HomingMax = 0
+	gr.HomingMaxTime = 0.0
+	gr.DaggersFired = 0
+	gr.DaggersFiredSlice = []int{}
+	gr.DaggersHit = 0
+	gr.DaggersHitSlice = []int{}
+	gr.EnemiesAlive = 0
+	gr.EnemiesAliveSlice = []int{}
+	gr.EnemiesAliveMax = 0
+	gr.EnemiesAliveMaxTime = 0.0
+	gr.EnemiesKilled = 0
+	gr.EnemiesKilledSlice = []int{}
+	gr.DeathType = 0
+	gr.ReplayPlayerID = 0
+	gr.Version = version
+	gr.SurvivalHash = gameCapture.survivalHash
+}
+
+func (gr *GameRecording) WasReset() bool {
+	if len(gr.TimerSlice) == 0 {
+		return true
+	}
+	return false
+}
+
+// GameCapture is the structure that captures all game data from dd.exe.
+type GameCapture struct {
 	status              status
+	lastRecording       float32
+	survivalHash        string
 	isAlive             bool
 	isReplay            bool
 	playerJustDied      bool
@@ -131,7 +264,8 @@ type gameCapture struct {
 	accuracy            float64
 }
 
-func (gc *gameCapture) ResetGameVariables() {
+func (gc *GameCapture) Reset() {
+	gc.lastRecording = 0.0
 	gc.deathType = 0
 	deathType.Reset(0)
 	gc.timer = 0.0
@@ -162,7 +296,22 @@ func (gc *gameCapture) ResetGameVariables() {
 	gc.accuracy = 0.0
 }
 
-func (gc *gameCapture) GetPlayerVariables() {
+func (gc *GameCapture) GetSurvivalHash() error {
+	f, err := os.Open(survivalFilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	h := md5.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+	gc.survivalHash = fmt.Sprintf("%x", h.Sum(nil))
+	return nil
+}
+
+func (gc *GameCapture) GetPlayerVariables() {
 	if handle != 0 {
 		playerID.Get()
 		playerName.Get()
@@ -172,7 +321,7 @@ func (gc *gameCapture) GetPlayerVariables() {
 	}
 }
 
-func (gc *gameCapture) GetReplayPlayerVariables() {
+func (gc *GameCapture) GetReplayPlayerVariables() {
 	if handle != 0 {
 		replayPlayerID.Get()
 		replayPlayerName.Get()
@@ -182,19 +331,19 @@ func (gc *gameCapture) GetReplayPlayerVariables() {
 	}
 }
 
-func (gc *gameCapture) ResetReplayPlayerVariables() {
+func (gc *GameCapture) ResetReplayPlayerVariables() {
 	gc.replayPlayerID = 0
 	gc.replayPlayerName = ""
 }
 
-func (gc *gameCapture) GetStatus() status {
+func (gc *GameCapture) GetStatus() status {
 	return gc.status
 }
 
 // This function is heavily commented because of the weird nature
 // of reading how another program's memory is working. The logic
 // is a bit squirrely.
-func (gc *gameCapture) GetGameVariables() {
+func (gc *GameCapture) GetGameVariables() {
 
 	// Get the handle before retrieving any variables. This helps ensure that the
 	// user hasn't closed dd in the interim.
@@ -225,14 +374,44 @@ func (gc *gameCapture) GetGameVariables() {
 
 		if !isAlive.GetVariable().(bool) && isAlive.GetPreviousVariable().(bool) {
 			gc.playerJustDied = true
+			gc.status = statusIsDead
+
 			deathType.Get()
+			gc.deathType = deathType.GetVariable().(int)
 
 			gc.timer = timer.GetVariable().(float32)
-			gc.deathType = deathType.GetVariable().(int)
+			gc.totalGems = totalGems.GetVariable().(int)
+			gc.homing = homing.GetVariable().(int)
+			if gc.homing > gc.homingMax {
+				gc.homingMax = gc.homing
+				gc.homingMaxTime = gc.timer
+			}
+			if gc.enemiesAlive > gc.enemiesAliveMax {
+				gc.enemiesAliveMax = gc.enemiesAlive
+				gc.enemiesAliveMaxTime = gc.timer
+			}
+			gc.enemiesAlive = enemiesAlive.GetVariable().(int)
+			gc.enemiesKilled = enemiesKilled.GetVariable().(int)
+			gc.daggersFired = daggersFired.GetVariable().(int)
+			gc.daggersHit = daggersHit.GetVariable().(int)
 			gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int)
 			gc.homingAtDeath = homing.GetPreviousVariable().(int)
+			if gc.level2time == 0.0 && gc.gems >= 10 {
+				gc.level2time = gc.timer
+			}
+			if gc.level3time == 0.0 && gc.gems == 70 {
+				gc.level3time = gc.timer
+			}
+			if gc.level4time == 0.0 && gc.gems == 71 {
+				gc.level4time = gc.timer
+			}
 
-			gc.status = statusIsDead
+			if gc.timer > 4.0 {
+				gameRecording.Stop()
+				submitGame()
+			}
+			gameRecording.Reset()
+			gameCapture.Reset()
 		}
 
 		if gc.isAlive {
@@ -245,8 +424,12 @@ func (gc *gameCapture) GetGameVariables() {
 			gc.timer = timer.GetVariable().(float32)
 			if gc.timer == 0.0 {
 				if enemiesAlive.GetVariable().(int) == 0 {
+					if gc.survivalHash == "" {
+						gc.GetSurvivalHash()
+					}
 					gc.status = statusInDaggerLobby
 				} else {
+					gc.survivalHash = ""
 					gc.status = statusInMainMenu
 				}
 				return
@@ -259,6 +442,18 @@ func (gc *gameCapture) GetGameVariables() {
 					gc.ResetReplayPlayerVariables()
 				}
 				gc.status = statusIsPlaying
+			}
+
+			// The rest is only recorded if isAlive or isReplay...
+
+			// If the user presses 'R' to restart mid-game
+			if timer.GetVariable().(float32) < timer.GetPreviousVariable().(float32) {
+				gameRecording.Reset()
+			}
+
+			// If a new game was started,
+			if gameRecording.WasReset() {
+				gc.lastRecording = gc.timer - 1
 			}
 
 			gc.gems = gems.GetVariable().(int)
@@ -290,6 +485,12 @@ func (gc *gameCapture) GetGameVariables() {
 			if gc.level4time == 0.0 && gc.gems == 71 {
 				gc.level4time = gc.timer
 			}
+
+			// If more than a second has elapsed in the game, capture a recording.
+			if math.Floor(float64(gc.timer))-math.Floor(float64(gc.lastRecording)) >= 1 {
+				gameRecording.RecordVariables()
+				gc.lastRecording = gc.timer
+			}
 		} else if gc.playerName == "" {
 			gc.status = statusConnecting
 		} else {
@@ -298,5 +499,12 @@ func (gc *gameCapture) GetGameVariables() {
 			}
 			gc.status = statusIsDead
 		}
+	}
+}
+
+func (gc *GameCapture) Run() {
+	for {
+		gc.GetGameVariables()
+		time.Sleep(time.Second / captureFPS)
 	}
 }
