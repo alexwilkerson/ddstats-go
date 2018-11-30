@@ -14,6 +14,18 @@ const (
 	gameAddress      address = 0x001F8084
 )
 
+type status int
+
+const (
+	statusNotConnected status = iota
+	statusConnecting
+	statusIsPlaying
+	statusIsReplay
+	statusInMainMenu
+	statusInDaggerLobby
+	statusIsDead
+)
+
 var (
 	motd            string
 	validVersion    = true

@@ -8,8 +8,18 @@ import (
 	ui "github.com/gizak/termui"
 )
 
-const (
-	logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @@@@@@
+type statDisplay struct {
+	timer         float32
+	daggersHit    int
+	daggersFired  int
+	accuracy      float64
+	totalGems     int
+	homing        int
+	enemiesAlive  int
+	enemiesKilled int
+}
+
+const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @@@@@@
 @@@@@@@@  @@@@@@@@  @@@@@@@   @@@@@@@  @@@@@@@@  @@@@@@@  @@@@@@@
 @@!  @@@  @@!  @@@  !@@         @@!    @@!  @@@    @@!    !@@
 !@!  @!@  !@!  @!@  !@!         !@!    !@!  @!@    !@!    !@!
@@ -19,7 +29,40 @@ const (
 :!:  !:!  :!:  !:!      !:!     :!:    :!:  !:!    :!:        !:!
  :::: ::   :::: ::  :::: ::      ::    ::   :::     ::    :::: ::
 :: :  :   :: :  :   :: : :       :      :   : :     :     :: : :`
-)
+
+func (sd *statDisplay) Update() {
+	if gc.status == statusInMainMenu || gc.status == statusInDaggerLobby || gc.status == statusConnecting || gc.status == statusNotConnected {
+		sd.Reset()
+	} else {
+		sd.timer = gc.timer
+		sd.daggersHit = gc.daggersHit
+		sd.daggersFired = gc.daggersFired
+		sd.accuracy = gc.accuracy
+		if gc.GetStatus() == statusIsPlaying {
+			sd.totalGems = -1
+			sd.homing = -1
+		} else if gc.GetStatus() == statusIsDead {
+			sd.totalGems = gc.totalGemsAtDeath
+			sd.homing = gc.homingAtDeath
+		} else {
+			sd.totalGems = gc.totalGems
+			sd.homing = gc.homing
+		}
+		sd.enemiesAlive = gc.enemiesAlive
+		sd.enemiesKilled = gc.enemiesKilled
+	}
+}
+
+func (sd *statDisplay) Reset() {
+	sd.timer = 0.0
+	sd.daggersHit = 0
+	sd.daggersFired = 0
+	sd.accuracy = 0.0
+	sd.totalGems = 0
+	sd.homing = 0
+	sd.enemiesAlive = 0
+	sd.enemiesKilled = 0
+}
 
 func setupHandles() {
 	ui.Handle("<f10>", quit)
@@ -102,9 +145,8 @@ func classicLayout() {
 
 	for {
 
-		if gc.isAlive && gc.playerName == "" {
-			gc.GetPlayerVariables()
-		}
+		gc.GetGameVariables()
+		sd.Update()
 
 		nameLabel.Text = fmt.Sprintf("%v", gc.playerName)
 
@@ -119,44 +161,36 @@ func classicLayout() {
 		}
 
 		var statusString string
-		switch {
-		case handle == 0:
+		switch gc.GetStatus() {
+		case statusNotConnected:
 			statusString = "Devil Daggers not found"
-		case gc.inMainMenu:
+			statusLabel.TextFgColor = ui.StringToAttribute("red")
+		case statusInMainMenu:
 			statusString = "In main menu"
-		case gc.inDaggerLobby:
+			statusLabel.TextFgColor = ui.StringToAttribute("green")
+		case statusInDaggerLobby:
 			statusString = "In dagger lobby"
-		case gc.isReplay:
+			statusLabel.TextFgColor = ui.StringToAttribute("green")
+		case statusIsReplay:
 			statusString = "Watching replay"
-		case gc.isPlaying:
+			statusLabel.TextFgColor = ui.StringToAttribute("green")
+		case statusIsPlaying:
 			statusString = "Currently playing"
-		case gc.playerName == "":
+			statusLabel.TextFgColor = ui.StringToAttribute("green")
+		case statusConnecting:
 			statusString = "Connecting to Devil Daggers"
-		case gc.isDead:
+			statusLabel.TextFgColor = ui.StringToAttribute("yellow")
+		case statusIsDead:
 			statusString = "Death screen"
-		default:
-			statusString = "UNKNOWN"
+			statusLabel.TextFgColor = ui.StringToAttribute("red")
 		}
 		statusLabel.X = ui.TermWidth()/2 - (len(statusString)/2 + 6)
-		if gc.playerName == "" && handle != 0 {
-			statusLabel.TextFgColor = ui.StringToAttribute("yellow")
-		} else if handle == 0 || gc.isDead {
-			statusLabel.TextFgColor = ui.StringToAttribute("red")
-		} else {
-			statusLabel.TextFgColor = ui.StringToAttribute("green")
-		}
+
 		statusLabel.X = ui.TermWidth()/2 - len(statusString)/2 - 19
 		statusLabel.Height = 1
 		statusLabel.Text = "                [[ " + statusString + " ]]                "
 
 		ui.Render(nameLabel, motdLabel, statusLabel)
-
-		getHandle()
-		if handle != 0 {
-			gc.GetGameVariables()
-		} else {
-			gc.playerName = ""
-		}
 
 		timerString := fmt.Sprintf("In Game Timer: %.4fs", sd.timer)
 		daggersHitString := fmt.Sprintf("Daggers Hit: %d", sd.daggersHit)

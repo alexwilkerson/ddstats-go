@@ -101,46 +101,10 @@ func (gridv *gameReplayIDVariable) Get() {
 	gridv.replayIDVariable.variable = "XXXXXX"
 }
 
-type statDisplay struct {
-	timer         float32
-	daggersHit    int
-	daggersFired  int
-	accuracy      float64
-	totalGems     int
-	homing        int
-	enemiesAlive  int
-	enemiesKilled int
-}
-
-func (sd *statDisplay) Update() {
-	sd.timer = gc.timer
-	sd.daggersHit = gc.daggersHit
-	sd.daggersFired = gc.daggersFired
-	sd.accuracy = gc.accuracy
-	sd.totalGems = gc.totalGems
-	sd.homing = gc.homing
-	sd.enemiesAlive = gc.enemiesAlive
-	sd.enemiesKilled = gc.enemiesKilled
-}
-
-func (sd *statDisplay) Reset() {
-	sd.timer = 0.0
-	sd.daggersHit = 0
-	sd.daggersFired = 0
-	sd.accuracy = 0.0
-	sd.totalGems = 0
-	sd.homing = 0
-	sd.enemiesAlive = 0
-	sd.enemiesKilled = 0
-}
-
 type gameCapture struct {
+	status              status
 	isAlive             bool
-	isDead              bool
-	isPlaying           bool
 	isReplay            bool
-	inMainMenu          bool
-	inDaggerLobby       bool
 	playerJustDied      bool
 	playerID            int
 	playerName          string
@@ -150,10 +114,12 @@ type gameCapture struct {
 	timer               float32
 	gems                int
 	totalGems           int
+	totalGemsAtDeath    int
 	level2time          float32
 	level3time          float32
 	level4time          float32
 	homing              int
+	homingAtDeath       int
 	homingMax           int
 	homingMaxTime       float32
 	enemiesAlive        int
@@ -173,11 +139,13 @@ func (gc *gameCapture) ResetGameVariables() {
 	gc.gems = 0
 	gems.Reset(0)
 	gc.totalGems = 0
+	gc.totalGemsAtDeath = 0
 	totalGems.Reset(0)
 	gc.level2time = 0.0
 	gc.level3time = 0.0
 	gc.level4time = 0.0
 	gc.homing = 0
+	gc.homingAtDeath = 0
 	homing.Reset(0)
 	gc.homingMax = 0
 	gc.homingMaxTime = 0.0
@@ -214,8 +182,34 @@ func (gc *gameCapture) GetReplayPlayerVariables() {
 	}
 }
 
+func (gc *gameCapture) ResetReplayPlayerVariables() {
+	gc.replayPlayerID = 0
+	gc.replayPlayerName = ""
+}
+
+func (gc *gameCapture) GetStatus() status {
+	return gc.status
+}
+
+// This function is heavily commented because of the weird nature
+// of reading how another program's memory is working. The logic
+// is a bit squirrely.
 func (gc *gameCapture) GetGameVariables() {
-	if handle != 0 {
+
+	// Get the handle before retrieving any variables. This helps ensure that the
+	// user hasn't closed dd in the interim.
+	getHandle()
+
+	// If the game is not found, reset the playerName to ""
+	// This is to make sure that 'connecting' is appropriately set
+	// on reopening dd.exe multiple times.
+	if handle == 0 {
+
+		gc.status = statusNotConnected
+		gc.playerName = ""
+
+	} else {
+
 		isAlive.Get()
 		isReplay.Get()
 		timer.Get()
@@ -233,40 +227,40 @@ func (gc *gameCapture) GetGameVariables() {
 			gc.playerJustDied = true
 			deathType.Get()
 
-			gc.isDead = true
 			gc.timer = timer.GetVariable().(float32)
 			gc.deathType = deathType.GetVariable().(int)
-			gc.gems = gems.GetPreviousVariable().(int)
-			gc.homing = homing.GetPreviousVariable().(int)
+			gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int)
+			gc.homingAtDeath = homing.GetPreviousVariable().(int)
 
-			sd.Update()
+			gc.status = statusIsDead
 		}
 
 		if gc.isAlive {
-			gc.isDead = false
+
+			if gc.playerName == "" {
+				gc.GetPlayerVariables()
+			}
+
 			gc.isReplay = isReplay.GetVariable().(bool)
 			gc.timer = timer.GetVariable().(float32)
 			if gc.timer == 0.0 {
-				gc.isPlaying = false
 				if enemiesAlive.GetVariable().(int) == 0 {
-					gc.inMainMenu = false
-					gc.inDaggerLobby = true
+					gc.status = statusInDaggerLobby
 				} else {
-					gc.inMainMenu = true
-					gc.inDaggerLobby = false
+					gc.status = statusInMainMenu
 				}
+				return
+			}
+
+			if gc.isReplay {
+				gc.status = statusIsReplay
 			} else {
-				if gc.isReplay {
-					gc.isPlaying = false
-				} else {
-					gc.isPlaying = true
+				if gc.replayPlayerName != "" {
+					gc.ResetReplayPlayerVariables()
 				}
-				gc.inMainMenu = false
-				gc.inDaggerLobby = false
+				gc.status = statusIsPlaying
 			}
-			if gc.inMainMenu {
-				sd.Reset()
-			}
+
 			gc.gems = gems.GetVariable().(int)
 			gc.totalGems = totalGems.GetVariable().(int)
 			gc.homing = homing.GetVariable().(int)
@@ -296,19 +290,13 @@ func (gc *gameCapture) GetGameVariables() {
 			if gc.level4time == 0.0 && gc.gems == 71 {
 				gc.level4time = gc.timer
 			}
-			if gc.isPlaying {
-				sd.Update()
-				sd.totalGems = -1
-				sd.homing = -1
-			} else if gc.isReplay {
-				sd.Update()
-			}
+		} else if gc.playerName == "" {
+			gc.status = statusConnecting
 		} else {
-			gc.isDead = true
-			gc.inDaggerLobby = false
-			gc.inMainMenu = false
-			gc.isReplay = false
-			gc.isPlaying = false
+			if gc.replayPlayerName != "" {
+				gc.ResetReplayPlayerVariables()
+			}
+			gc.status = statusIsDead
 		}
 	}
 }
