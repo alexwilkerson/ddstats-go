@@ -7,7 +7,7 @@ import (
 const (
 	version        = "0.4.0"
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
-	captureFPS     = 40
+	captureFPS     = 50
 	uiFPS          = 2
 )
 
