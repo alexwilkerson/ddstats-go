@@ -80,6 +80,7 @@ var (
 var (
 	homing = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x224}, variable: 0}
 	gems   = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x218}, variable: 0}
+	isDead = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0xCC}, variable: 0}
 )
 
 var replayPlayerID = gameReplayIDVariable{

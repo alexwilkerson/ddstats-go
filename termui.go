@@ -9,6 +9,7 @@ import (
 )
 
 type statDisplay struct {
+	deathScreen   bool
 	timer         float32
 	daggersHit    int
 	daggersFired  int
@@ -88,7 +89,7 @@ func classicLayout() {
 	debugWindow.SetY(1)
 	debugWindow.Width = 67
 	debugWindow.Height = ui.TermHeight()
-	debugWindow.Float = ui.AlignTop
+	debugWindow.Float = ui.AlignBottom
 
 	logo := ui.NewPar(logoString)
 	logo.TextFgColor = ui.StringToAttribute("red")
@@ -165,8 +166,9 @@ func classicLayout() {
 	lastGameLabel.Width = 66
 
 	for {
-		// gameCapture.GetGameVariables()
-		sd.Update()
+		if gameCapture.GetStatus() != statusIsDead {
+			sd.Update()
+		}
 
 		if debugWindowVisible {
 			debugWindow.Text = debug.log

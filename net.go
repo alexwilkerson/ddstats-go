@@ -39,15 +39,14 @@ type whatever struct {
 	name string
 }
 
-func submitGame() {
-	jsonValue, err := json.Marshal(gameRecording)
+func submitGame(gr GameRecording) {
+	jsonValue, err := json.Marshal(gr)
 	if err != nil {
 		debug.Log(err)
+		gameRecording.Reset()
 		return
 	}
-	debug.Log(string(jsonValue[:]))
-	debug.Log(gameRecording)
-	debug.Log("test")
+
 	resp, err := http.Post("http://ddstats.com/api/submit_game", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		lastGameURL = "Error submitting game to server."
