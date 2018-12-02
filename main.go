@@ -18,6 +18,8 @@ func main() {
 
 	go getMotd()
 
+	go liveStreamStats()
+
 	go gameCapture.Run()
 
 	go classicLayout()

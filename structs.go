@@ -444,6 +444,7 @@ func (gc *GameCapture) GetGameVariables() {
 			// reset the gameRecording struct, update the display,
 			// reset the gameCapture struct
 			gameRecording.Stop()
+			sioVariables.Update()
 			go submitGame(gameRecording)
 			gameRecording.Reset()
 			sd.Update()
@@ -531,6 +532,8 @@ func (gc *GameCapture) GetGameVariables() {
 			if gc.level4time == 0.0 && gc.gems == 71 {
 				gc.level4time = gc.timer
 			}
+
+			sioVariables.Update()
 
 			// If more than a second has elapsed in the game, capture a recording.
 			if math.Floor(float64(gc.timer))-math.Floor(float64(gc.lastRecording)) >= 1 {

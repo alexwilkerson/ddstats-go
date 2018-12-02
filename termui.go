@@ -9,7 +9,6 @@ import (
 )
 
 type statDisplay struct {
-	deathScreen   bool
 	timer         float32
 	daggersHit    int
 	daggersFired  int
@@ -126,7 +125,7 @@ func classicLayout() {
 	updateLabel.TextFgColor = ui.StringToAttribute("green")
 	updateLabel.Border = false
 	updateLabel.X = ui.TermWidth()/2 - 9
-	updateLabel.Y = 11
+	updateLabel.Y = 0
 	updateLabel.Width = 19
 	updateLabel.Height = 1
 
@@ -143,6 +142,20 @@ func classicLayout() {
 	statusLabel.Y = 13
 	statusLabel.Height = 1
 	statusLabel.Width = 70
+
+	onlineLabel := ui.NewPar("")
+	onlineLabel.Border = false
+	onlineLabel.X = ui.TermWidth() / 2
+	onlineLabel.Y = 11
+	onlineLabel.Height = 1
+	onlineLabel.Width = 20
+
+	recordingLabel := ui.NewPar("")
+	recordingLabel.Border = false
+	recordingLabel.X = ui.TermWidth() / 2
+	recordingLabel.Y = 14
+	recordingLabel.Height = 1
+	recordingLabel.Width = 20
 
 	statsLeft := ui.NewPar("")
 	statsLeft.SetX(ui.TermWidth()/2 - 34)
@@ -208,13 +221,31 @@ func classicLayout() {
 				statusString = "Death screen"
 				statusLabel.TextFgColor = ui.StringToAttribute("red")
 			}
-			statusLabel.X = ui.TermWidth()/2 - (len(statusString)/2 + 6)
 
 			statusLabel.X = ui.TermWidth()/2 - len(statusString)/2 - 19
 			statusLabel.Height = 1
 			statusLabel.Text = "                [[ " + statusString + " ]]                "
 
-			ui.Render(nameLabel, motdLabel, statusLabel)
+			onlineLabel.Height = 1
+			if sioVariables.online == true {
+				onlineLabel.TextFgColor = ui.StringToAttribute("green")
+				onlineLabel.Text = "    [[ Online ]]    "
+			} else {
+				onlineLabel.TextFgColor = ui.StringToAttribute("yellow")
+				onlineLabel.Text = "[[ Connecting... ]]"
+			}
+			onlineLabel.X = ui.TermWidth()/2 - len(onlineLabel.Text)/2
+
+			if gameCapture.GetStatus() == statusIsPlaying {
+				recordingLabel.TextFgColor = ui.StringToAttribute("bold, green")
+				recordingLabel.Text = "  [[ Recording ]]  "
+			} else {
+				recordingLabel.TextFgColor = ui.StringToAttribute("red")
+				recordingLabel.Text = "[[ Not recording ]]"
+			}
+			recordingLabel.X = ui.TermWidth()/2 - len(recordingLabel.Text)/2
+
+			ui.Render(nameLabel, motdLabel, onlineLabel, statusLabel, recordingLabel)
 
 			if updateAvailable {
 				ui.Render(updateLabel)
