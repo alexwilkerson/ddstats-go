@@ -82,50 +82,30 @@ func liveStreamStats() {
 }
 
 func sioSubmit(c *gosocketio.Client) {
-	if gameCapture.GetStatus() == statusIsDead {
-		if sioVariables.deathScreenSent == false {
+	if gameCapture.GetStatus() == statusIsPlaying || (gameCapture.GetStatus() == statusIsDead && sioVariables.deathScreenSent == false) {
+		if gameCapture.GetStatus() == statusIsDead {
 			sioVariables.deathScreenSent = true
-			if err := c.Emit(
-				"submit",
-				sioVariables.playerID,
-				sioVariables.timer,
-				sioVariables.totalGems,
-				sioVariables.homing,
-				sioVariables.enemiesAlive,
-				sioVariables.enemiesKilled,
-				sioVariables.daggersHit,
-				sioVariables.daggersFired,
-				sioVariables.level2time,
-				sioVariables.level3time,
-				sioVariables.level4time,
-				sioVariables.isReplay,
-				sioVariables.deathType,
-			); err != nil {
-				return
-			}
-			return
-		} else {
+		} else if gameCapture.GetStatus() == statusIsPlaying {
+			sioVariables.deathScreenSent = false
+		}
+		if err := c.Emit(
+			"submit",
+			sioVariables.playerID,
+			sioVariables.timer,
+			sioVariables.totalGems,
+			sioVariables.homing,
+			sioVariables.enemiesAlive,
+			sioVariables.enemiesKilled,
+			sioVariables.daggersHit,
+			sioVariables.daggersFired,
+			sioVariables.level2time,
+			sioVariables.level3time,
+			sioVariables.level4time,
+			sioVariables.isReplay,
+			sioVariables.deathType,
+		); err != nil {
 			return
 		}
-	}
-	sioVariables.deathScreenSent = false
-	if err := c.Emit(
-		"submit",
-		sioVariables.playerID,
-		sioVariables.timer,
-		sioVariables.totalGems,
-		sioVariables.homing,
-		sioVariables.enemiesAlive,
-		sioVariables.enemiesKilled,
-		sioVariables.daggersHit,
-		sioVariables.daggersFired,
-		sioVariables.level2time,
-		sioVariables.level3time,
-		sioVariables.level4time,
-		sioVariables.isReplay,
-		sioVariables.deathType,
-	); err != nil {
-		return
 	}
 }
 

@@ -374,6 +374,7 @@ func (gc *GameCapture) GetGameVariables() {
 
 		// if you have a handle, grab all of the variables from the game
 		gc.wg.Add(10)
+		go isAlive.AsyncGet(&gc.wg)
 		go isReplay.AsyncGet(&gc.wg)
 		go timer.AsyncGet(&gc.wg)
 		go gems.AsyncGet(&gc.wg)
@@ -383,7 +384,6 @@ func (gc *GameCapture) GetGameVariables() {
 		go enemiesKilled.AsyncGet(&gc.wg)
 		go daggersFired.AsyncGet(&gc.wg)
 		go daggersHit.AsyncGet(&gc.wg)
-		go isAlive.AsyncGet(&gc.wg)
 		gc.wg.Wait()
 
 		gc.isAlive = isAlive.GetVariable().(bool)
@@ -564,6 +564,8 @@ func (gc *GameCapture) GetGameVariables() {
 				gc.ResetReplayPlayerVariables()
 			}
 			gc.status = statusIsDead
+			deathType.Get()
+			gc.deathType = deathType.GetVariable().(int)
 		}
 	}
 }

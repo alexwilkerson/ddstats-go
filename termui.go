@@ -17,6 +17,7 @@ type statDisplay struct {
 	homing        int
 	enemiesAlive  int
 	enemiesKilled int
+	deathType     int
 }
 
 const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @@@@@@
@@ -50,6 +51,7 @@ func (sd *statDisplay) Update() {
 		}
 		sd.enemiesAlive = gameCapture.enemiesAlive
 		sd.enemiesKilled = gameCapture.enemiesKilled
+		sd.deathType = gameCapture.deathType
 	}
 }
 
@@ -62,6 +64,7 @@ func (sd *statDisplay) Reset() {
 	sd.homing = 0
 	sd.enemiesAlive = 0
 	sd.enemiesKilled = 0
+	sd.deathType = 0
 }
 
 func setupHandles() {
@@ -189,7 +192,12 @@ func classicLayout() {
 		} else {
 			ui.Render(logo, versionLabel, exitLabel)
 
-			nameLabel.Text = fmt.Sprintf("%v", gameCapture.playerName)
+			if gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
+				nameLabel.Text = "                           "
+			} else {
+				nameLabel.Text = fmt.Sprintf("%v", gameCapture.playerName)
+			}
+			nameLabel.Width = len(nameLabel.Text) + 1
 
 			if motd != "" {
 				motdLabel.X = ui.TermWidth()/2 - len(motd)/2
@@ -218,16 +226,16 @@ func classicLayout() {
 				statusString = "Connecting to Devil Daggers"
 				statusLabel.TextFgColor = ui.StringToAttribute("yellow")
 			case statusIsDead:
-				statusString = "Death screen"
+				statusString = deathTypes[gameCapture.deathType]
 				statusLabel.TextFgColor = ui.StringToAttribute("red")
 			}
 
 			statusLabel.X = ui.TermWidth()/2 - len(statusString)/2 - 19
-			statusLabel.Height = 1
 			statusLabel.Text = "                [[ " + statusString + " ]]                "
 
-			onlineLabel.Height = 1
-			if sioVariables.online == true {
+			if gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
+				onlineLabel.Text = "                    "
+			} else if sioVariables.online == true {
 				onlineLabel.TextFgColor = ui.StringToAttribute("green")
 				onlineLabel.Text = "    [[ Online ]]    "
 			} else {

@@ -39,6 +39,10 @@ var (
 	lastGameURL        = "None."
 )
 
+var deathTypes = [...]string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "Opened", "Purged",
+	"Desecrated", "Sacrificed", "Eviscerated", "Annihilated", "Intoxicated",
+	"Envenmonated", "Incarnated", "Discarnated", "Barbed"}
+
 var (
 	handle           w32.HANDLE
 	exeBaseAddress   address
