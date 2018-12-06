@@ -20,20 +20,20 @@ const (
 const sioTimeoutAttempts = 60
 
 type SioVariables struct {
-	status          int
-	playerID        int
+	status          int32
+	playerID        int32
 	timer           float32
-	totalGems       int
-	homing          int
-	enemiesAlive    int
-	enemiesKilled   int
-	daggersHit      int
-	daggersFired    int
+	totalGems       int32
+	homing          int32
+	enemiesAlive    int32
+	enemiesKilled   int32
+	daggersHit      int32
+	daggersFired    int32
 	level2time      float32
 	level3time      float32
 	level4time      float32
 	isReplay        bool
-	deathType       int
+	deathType       int32
 	deathScreenSent bool
 }
 
@@ -99,11 +99,12 @@ func liveStreamStats() {
 		debug.Log("Connected to server.")
 
 		// wait until a username has been stored before logging in.
-		for gameCapture.GetStatus() == statusConnecting || gameCapture.GetStatus() == statusNotConnected || gameCapture.playerID > 1000000 {
+		for gameCapture.GetStatus() == statusConnecting || gameCapture.GetStatus() == statusNotConnected || gameCapture.playerID == -1 {
 			if sioVariables.status == sioStatusDisconnected {
 				break
 			}
-			debug.Log("sio checking if dd.exe is connected.")
+			debug.Log(gameCapture.playerID)
+			// debug.Log("sio checking if dd.exe is connected.")
 			time.Sleep(time.Second)
 		}
 

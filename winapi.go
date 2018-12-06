@@ -75,7 +75,7 @@ func getValue(i interface{}, p address) {
 		return
 	}
 	switch reflect.Indirect(reflect.ValueOf(i)).Elem().Type().String() {
-	case "int":
+	case "int", "int32":
 		buf, _, ok := w32.ReadProcessMemory(handle, uintptr(p), 4)
 		if !ok {
 			return

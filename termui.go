@@ -10,14 +10,14 @@ import (
 
 type statDisplay struct {
 	timer         float32
-	daggersHit    int
-	daggersFired  int
+	daggersHit    int32
+	daggersFired  int32
 	accuracy      float64
-	totalGems     int
-	homing        int
-	enemiesAlive  int
-	enemiesKilled int
-	deathType     int
+	totalGems     int32
+	homing        int32
+	enemiesAlive  int32
+	enemiesKilled int32
+	deathType     int32
 }
 
 const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @@@@@@

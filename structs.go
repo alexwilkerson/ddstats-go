@@ -43,7 +43,7 @@ func (gv *gameVariable) Get() {
 	getValue(&gv.variable, pointer+gv.offsets[len(gv.offsets)-1])
 	switch gv.variable.(type) {
 	case int:
-		gv.variable = int(gv.variable.(int))
+		gv.variable = int32(gv.variable.(int))
 	case float32:
 		gv.variable = float32(gv.variable.(float32))
 	case float64:
@@ -95,17 +95,17 @@ func (gsv *gameStringVariable) Get() {
 	maxSizeOffset := gsv.stringVariable.offsets[0] + 0x14
 	maxSizeVariable := gameVariable{parentOffset: gameStatsAddress, offsets: []address{maxSizeOffset}, variable: 0}
 	maxSizeVariable.Get()
-	maxSize := maxSizeVariable.variable.(int)
+	maxSize := maxSizeVariable.variable.(int32)
 
 	iterations := int(math.Log2(float64(maxSize)+1)) - 4
 
 	for i := 0; i < iterations; i++ {
 		gsv.stringVariable.offsets = append(gsv.stringVariable.offsets, 0x0)
 	}
-	gsv.stringVariable.variable = string(make([]byte, length.(int)))
+	gsv.stringVariable.variable = string(make([]byte, length.(int32)))
 	gsv.stringVariable.Get()
 
-	gsv.variable = gsv.stringVariable.variable.(string)[:length.(int)]
+	gsv.variable = gsv.stringVariable.variable.(string)[:length.(int32)]
 	gsv.stringVariable.variable = ""
 }
 
@@ -129,32 +129,32 @@ func (gridv *gameReplayIDVariable) Get() {
 }
 
 type GameRecording struct {
-	PlayerID            int       `json:"playerID"`
+	PlayerID            int32     `json:"playerID"`
 	PlayerName          string    `json:"playerName"`
-	Granularity         int       `json:"granularity"`
+	Granularity         int32     `json:"granularity"`
 	Timer               float32   `json:"inGameTimer"`
 	TimerSlice          []float32 `json:"inGameTimerVector"`
-	TotalGems           int       `json:"gems"`
-	TotalGemsSlice      []int     `json:"gemsVector"`
+	TotalGems           int32     `json:"gems"`
+	TotalGemsSlice      []int32   `json:"gemsVector"`
 	Level2time          float32   `json:"levelTwoTime"`
 	Level3time          float32   `json:"levelThreeTime"`
 	Level4time          float32   `json:"levelFourTime"`
-	Homing              int       `json:"homingDaggers"`
-	HomingSlice         []int     `json:"homingDaggersVector"`
-	HomingMax           int       `json:"homingDaggersMax"`
+	Homing              int32     `json:"homingDaggers"`
+	HomingSlice         []int32   `json:"homingDaggersVector"`
+	HomingMax           int32     `json:"homingDaggersMax"`
 	HomingMaxTime       float32   `json:"homingDaggersMaxTime"`
-	DaggersFired        int       `json:"daggersFired"`
-	DaggersFiredSlice   []int     `json:"daggersFiredVector"`
-	DaggersHit          int       `json:"daggersHit"`
-	DaggersHitSlice     []int     `json:"daggersHitVector"`
-	EnemiesAlive        int       `json:"enemiesAlive"`
-	EnemiesAliveSlice   []int     `json:"enemiesAliveVector"`
-	EnemiesAliveMax     int       `json:"enemiesAliveMax"`
+	DaggersFired        int32     `json:"daggersFired"`
+	DaggersFiredSlice   []int32   `json:"daggersFiredVector"`
+	DaggersHit          int32     `json:"daggersHit"`
+	DaggersHitSlice     []int32   `json:"daggersHitVector"`
+	EnemiesAlive        int32     `json:"enemiesAlive"`
+	EnemiesAliveSlice   []int32   `json:"enemiesAliveVector"`
+	EnemiesAliveMax     int32     `json:"enemiesAliveMax"`
 	EnemiesAliveMaxTime float32   `json:"enemiesAliveMaxTime"`
-	EnemiesKilled       int       `json:"enemiesKilled"`
-	EnemiesKilledSlice  []int     `json:"enemiesKilledVector"`
-	DeathType           int       `json:"deathType"`
-	ReplayPlayerID      int       `json:"replayPlayerID"`
+	EnemiesKilled       int32     `json:"enemiesKilled"`
+	EnemiesKilledSlice  []int32   `json:"enemiesKilledVector"`
+	DeathType           int32     `json:"deathType"`
+	ReplayPlayerID      int32     `json:"replayPlayerID"`
 	Version             string    `json:"version"`
 	SurvivalHash        string    `json:"survivalHash"`
 }
@@ -207,24 +207,24 @@ func (gr *GameRecording) Reset() {
 	gr.Timer = -1.0
 	gr.TimerSlice = []float32{}
 	gr.TotalGems = 0
-	gr.TotalGemsSlice = []int{}
+	gr.TotalGemsSlice = []int32{}
 	gr.Level2time = 0
 	gr.Level3time = 0
 	gr.Level4time = 0
 	gr.Homing = 0
-	gr.HomingSlice = []int{}
+	gr.HomingSlice = []int32{}
 	gr.HomingMax = 0
 	gr.HomingMaxTime = 0.0
 	gr.DaggersFired = 0
-	gr.DaggersFiredSlice = []int{}
+	gr.DaggersFiredSlice = []int32{}
 	gr.DaggersHit = 0
-	gr.DaggersHitSlice = []int{}
+	gr.DaggersHitSlice = []int32{}
 	gr.EnemiesAlive = 0
-	gr.EnemiesAliveSlice = []int{}
+	gr.EnemiesAliveSlice = []int32{}
 	gr.EnemiesAliveMax = 0
 	gr.EnemiesAliveMaxTime = 0.0
 	gr.EnemiesKilled = 0
-	gr.EnemiesKilledSlice = []int{}
+	gr.EnemiesKilledSlice = []int32{}
 	gr.DeathType = 0
 	gr.ReplayPlayerID = 0
 	gr.Version = version
@@ -246,31 +246,31 @@ type GameCapture struct {
 	survivalHash             string
 	v3                       bool
 	isAlive                  bool
-	isDead                   int
+	isDead                   int32
 	isReplay                 bool
-	playerID                 int
+	playerID                 int32
 	playerName               string
-	deathType                int
-	replayPlayerID           int
+	deathType                int32
+	replayPlayerID           int32
 	replayPlayerName         string
 	timer                    float32
-	gems                     int
-	totalGems                int
-	totalGemsAtDeath         int
+	gems                     int32
+	totalGems                int32
+	totalGemsAtDeath         int32
 	level2time               float32
 	level3time               float32
 	level4time               float32
-	homing                   int
-	homingAtDeath            int
-	homingMax                int
+	homing                   int32
+	homingAtDeath            int32
+	homingMax                int32
 	homingMaxTime            float32
-	enemiesAlive             int
-	enemiesAliveMaxPerSecond int
-	enemiesAliveMax          int
+	enemiesAlive             int32
+	enemiesAliveMaxPerSecond int32
+	enemiesAliveMax          int32
 	enemiesAliveMaxTime      float32
-	enemiesKilled            int
-	daggersFired             int
-	daggersHit               int
+	enemiesKilled            int32
+	daggersFired             int32
+	daggersHit               int32
 	accuracy                 float64
 }
 
@@ -332,7 +332,7 @@ func (gc *GameCapture) GetPlayerVariables() {
 		playerID.Get()
 		playerName.Get()
 
-		gc.playerID = playerID.GetVariable().(int)
+		gc.playerID = playerID.GetVariable().(int32)
 		gc.playerName = playerName.GetVariable().(string)
 	}
 }
@@ -343,10 +343,10 @@ func (gc *GameCapture) GetReplayPlayerVariables() {
 		// This is necessary, because when you watch your own replays, there
 		// is no replayPlayerID variable.
 		if replayPlayerName.GetVariable() == playerName.GetVariable() {
-			gc.replayPlayerID = playerID.GetVariable().(int)
+			gc.replayPlayerID = playerID.GetVariable().(int32)
 		} else {
 			replayPlayerID.Get()
-			gc.replayPlayerID = replayPlayerID.GetVariable().(int)
+			gc.replayPlayerID = replayPlayerID.GetVariable().(int32)
 		}
 		gc.replayPlayerName = replayPlayerName.GetVariable().(string)
 	}
@@ -409,7 +409,7 @@ func (gc *GameCapture) GetGameVariables() {
 				gc.status = statusIsDead
 
 				deathType.Get()
-				gc.deathType = deathType.GetVariable().(int)
+				gc.deathType = deathType.GetVariable().(int32)
 				// if deathType is invalid, make it 0 (FALLEN) by default. This is just to make sure
 				// some strange memory address was read.
 				if gc.deathType < 0 || gc.deathType > 15 {
@@ -418,7 +418,7 @@ func (gc *GameCapture) GetGameVariables() {
 
 				gc.timer = timer.GetVariable().(float32)
 				// this accounts for totalGems being reset on death.
-				gc.totalGems = totalGems.previousVariable.(int)
+				gc.totalGems = totalGems.previousVariable.(int32)
 				// this accounts for homing being reset on death.
 				// there might be a more elegent solution for this.
 				if len(gameRecording.HomingSlice) > 0 {
@@ -429,6 +429,10 @@ func (gc *GameCapture) GetGameVariables() {
 					gc.homingMax = gc.homing
 					gc.homingMaxTime = gc.timer
 				}
+				// Sometimes homing drops below zero. This fixes recording that.
+				if gc.homing < 0 {
+					gc.homing = 0
+				}
 				if gc.enemiesAlive > gc.enemiesAliveMax {
 					gc.enemiesAliveMax = gc.enemiesAlive
 					gc.enemiesAliveMaxTime = gc.timer
@@ -437,11 +441,11 @@ func (gc *GameCapture) GetGameVariables() {
 				if gc.enemiesAliveMaxPerSecond > gc.enemiesAlive {
 					gc.enemiesAlive = gc.enemiesAliveMaxPerSecond
 				}
-				gc.enemiesAlive = enemiesAlive.GetVariable().(int)
-				gc.enemiesKilled = enemiesKilled.GetVariable().(int)
-				gc.daggersFired = daggersFired.GetVariable().(int)
-				gc.daggersHit = daggersHit.GetVariable().(int)
-				gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int)
+				gc.enemiesAlive = enemiesAlive.GetVariable().(int32)
+				gc.enemiesKilled = enemiesKilled.GetVariable().(int32)
+				gc.daggersFired = daggersFired.GetVariable().(int32)
+				gc.daggersHit = daggersHit.GetVariable().(int32)
+				gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int32)
 				if len(gameRecording.HomingSlice) > 0 {
 					gc.homingAtDeath = gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1]
 				}
@@ -470,14 +474,14 @@ func (gc *GameCapture) GetGameVariables() {
 		if gc.isAlive {
 
 			// arbitrary number above the max user id number
-			if gc.playerName == "" || gc.playerID > 1000000 {
+			if gc.playerName == "" || gc.playerID == -1 {
 				gc.GetPlayerVariables()
 			}
 
 			gc.isReplay = isReplay.GetVariable().(bool)
 			gc.timer = timer.GetVariable().(float32)
 			if gc.timer == 0.0 {
-				if enemiesAlive.GetVariable().(int) == 0 {
+				if enemiesAlive.GetVariable().(int32) == 0 {
 					if gc.survivalHash == "" {
 						gc.GetSurvivalHash()
 					}
@@ -517,24 +521,28 @@ func (gc *GameCapture) GetGameVariables() {
 				}
 			}
 
-			gc.gems = gems.GetVariable().(int)
-			gc.totalGems = totalGems.GetVariable().(int)
-			gc.homing = homing.GetVariable().(int)
+			gc.gems = gems.GetVariable().(int32)
+			gc.totalGems = totalGems.GetVariable().(int32)
+			gc.homing = homing.GetVariable().(int32)
 			if gc.homing > gc.homingMax {
 				gc.homingMax = gc.homing
 				gc.homingMaxTime = gc.timer
+			}
+			// Sometimes homing drops below zero. This fixes recording that.
+			if gc.homing < 0 {
+				gc.homing = 0
 			}
 			if gc.enemiesAlive > gc.enemiesAliveMax {
 				gc.enemiesAliveMax = gc.enemiesAlive
 				gc.enemiesAliveMaxTime = gc.timer
 			}
-			gc.enemiesAlive = enemiesAlive.GetVariable().(int)
+			gc.enemiesAlive = enemiesAlive.GetVariable().(int32)
 			if gc.enemiesAlive > gc.enemiesAliveMaxPerSecond {
 				gc.enemiesAliveMaxPerSecond = gc.enemiesAlive
 			}
-			gc.enemiesKilled = enemiesKilled.GetVariable().(int)
-			gc.daggersFired = daggersFired.GetVariable().(int)
-			gc.daggersHit = daggersHit.GetVariable().(int)
+			gc.enemiesKilled = enemiesKilled.GetVariable().(int32)
+			gc.daggersFired = daggersFired.GetVariable().(int32)
+			gc.daggersHit = daggersHit.GetVariable().(int32)
 			if gc.daggersFired > 0 {
 				gc.accuracy = (float64(gc.daggersHit) / float64(gc.daggersFired)) * 100
 			} else {
@@ -587,7 +595,7 @@ func (gc *GameCapture) GetGameVariables() {
 			}
 			gc.status = statusIsDead
 			deathType.Get()
-			gc.deathType = deathType.GetVariable().(int)
+			gc.deathType = deathType.GetVariable().(int32)
 			if gc.deathType < 0 || gc.deathType > 15 {
 				gc.deathType = 0
 			}
