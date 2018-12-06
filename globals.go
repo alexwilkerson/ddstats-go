@@ -12,6 +12,8 @@ const (
 	uiFPS          = 2
 )
 
+const ddDeathStatus = int32(7)
+
 const (
 	gameStatsAddress address = 0x001F30C0
 	gameAddress      address = 0x001F8084

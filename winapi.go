@@ -132,7 +132,8 @@ func toBool(b []uint16) bool {
 }
 
 func toInt(b []uint16) int {
-	return int(b[0]) | (int(b[1]) << 16) | (int(b[2]) << 32) | (int(b[3]) << 48)
+	// return int(b[0]) | (int(b[1]) << 16) | (int(b[2]) << 32) | (int(b[3]) << 48)
+	return int(b[0]) | (int(b[1]) << 16)
 }
 
 func toFloat32(b []uint16) float32 {

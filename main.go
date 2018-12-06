@@ -1,3 +1,4 @@
+// +build 386
 //go:generate goversioninfo -icon=icon.ico
 package main
 

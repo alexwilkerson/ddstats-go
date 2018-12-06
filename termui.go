@@ -12,7 +12,7 @@ type statDisplay struct {
 	timer         float32
 	daggersHit    int32
 	daggersFired  int32
-	accuracy      float64
+	accuracy      float32
 	totalGems     int32
 	homing        int32
 	enemiesAlive  int32
@@ -243,9 +243,12 @@ func classicLayout() {
 				case sioStatusConnecting:
 					onlineLabel.TextFgColor = ui.StringToAttribute("yellow")
 					onlineLabel.Text = "[[ Connecting... ]]"
+				case sioStatusTimeout:
+					onlineLabel.TextFgColor = ui.StringToAttribute("red")
+					onlineLabel.Text = "  [[ Timed out ]]  "
 				case sioStatusLoggedIn:
 					onlineLabel.TextFgColor = ui.StringToAttribute("green")
-					onlineLabel.Text = "    [[ Online ]]    "
+					onlineLabel.Text = "  [[ Logged in ]]  "
 				case sioStatusConnected:
 					onlineLabel.TextFgColor = ui.StringToAttribute("green")
 					onlineLabel.Text = "  [[ Connected ]]  "

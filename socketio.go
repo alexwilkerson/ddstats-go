@@ -65,7 +65,12 @@ func liveStreamStats() {
 
 	var c *gosocketio.Client
 	var err error
+
 	for {
+
+		for gameCapture.GetStatus() == statusNotConnected {
+			time.Sleep(time.Second * 5)
+		}
 
 		if sioVariables.status == sioStatusDisconnected {
 			for i := 0; i < sioTimeoutAttempts; i++ {
@@ -129,15 +134,20 @@ func liveStreamStats() {
 
 		for {
 			if sioVariables.status == sioStatusDisconnected || gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
+				c.Close()
 				break
 			}
-			sioSubmit(*&c)
+			err := sioSubmit(*&c)
+			if err != nil {
+				c.Close()
+				break
+			}
 			time.Sleep(time.Second / sioFPS)
 		}
 	}
 }
 
-func sioSubmit(c *gosocketio.Client) {
+func sioSubmit(c *gosocketio.Client) error {
 	if gameCapture.GetStatus() == statusIsPlaying || (gameCapture.GetStatus() == statusIsDead && sioVariables.deathScreenSent == false) {
 		if gameCapture.GetStatus() == statusIsDead {
 			sioVariables.deathScreenSent = true
@@ -160,9 +170,10 @@ func sioSubmit(c *gosocketio.Client) {
 			sioVariables.isReplay,
 			sioVariables.deathType,
 		); err != nil {
-			return
+			return err
 		}
 	}
+	return nil
 }
 
 func sioErrorHandler(err error) {

@@ -42,6 +42,7 @@ type whatever struct {
 }
 
 func submitGame(gr GameRecording) {
+	debug.Log("Submitting Game.")
 	jsonValue, err := json.Marshal(gr)
 	if err != nil {
 		debug.Log(err)

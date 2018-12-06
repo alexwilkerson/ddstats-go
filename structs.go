@@ -44,6 +44,8 @@ func (gv *gameVariable) Get() {
 	switch gv.variable.(type) {
 	case int:
 		gv.variable = int32(gv.variable.(int))
+	case int32:
+		gv.variable = gv.variable.(int32)
 	case float32:
 		gv.variable = float32(gv.variable.(float32))
 	case float64:
@@ -271,7 +273,7 @@ type GameCapture struct {
 	enemiesKilled            int32
 	daggersFired             int32
 	daggersHit               int32
-	accuracy                 float64
+	accuracy                 float32
 }
 
 func (gc *GameCapture) Reset() {
@@ -377,6 +379,7 @@ func (gc *GameCapture) GetGameVariables() {
 
 		gc.status = statusNotConnected
 		gc.playerName = ""
+		gc.playerID = 0
 
 	} else {
 
@@ -401,7 +404,7 @@ func (gc *GameCapture) GetGameVariables() {
 		if !isAlive.GetVariable().(bool) && isAlive.GetPreviousVariable().(bool) {
 			isDead.Get()
 			// Make absolutely sure we are on the death screen and make sure not to send empty data.
-			if isDead.GetVariable() == 7 && !gameRecording.WasReset() {
+			if isDead.GetVariable() == ddDeathStatus && !gameRecording.WasReset() {
 				if gc.isReplay {
 					gc.GetReplayPlayerVariables()
 				}
@@ -475,6 +478,9 @@ func (gc *GameCapture) GetGameVariables() {
 
 			// arbitrary number above the max user id number
 			if gc.playerName == "" || gc.playerID == -1 {
+				// Sleep for half a second to make sure dd has a chance to initialize memory before reading
+				// player variables.
+				time.Sleep(time.Second / 2)
 				gc.GetPlayerVariables()
 			}
 
@@ -544,7 +550,7 @@ func (gc *GameCapture) GetGameVariables() {
 			gc.daggersFired = daggersFired.GetVariable().(int32)
 			gc.daggersHit = daggersHit.GetVariable().(int32)
 			if gc.daggersFired > 0 {
-				gc.accuracy = (float64(gc.daggersHit) / float64(gc.daggersFired)) * 100
+				gc.accuracy = (float32(gc.daggersHit) / float32(gc.daggersFired)) * 100
 			} else {
 				gc.accuracy = 0.0
 			}
