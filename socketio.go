@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"time"
 
@@ -8,8 +9,18 @@ import (
 	"github.com/wedeploy/gosocketio/websocket"
 )
 
+const (
+	sioStatusDisconnected = iota
+	sioStatusConnecting
+	sioStatusConnected
+	sioStatusLoggedIn
+	sioStatusTimeout
+)
+
+const sioTimeoutAttempts = 60
+
 type SioVariables struct {
-	online          bool
+	status          int
 	playerID        int
 	timer           float32
 	totalGems       int
@@ -52,33 +63,77 @@ func liveStreamStats() {
 		Host:   "ddstats.com",
 	}
 
-	c, err := gosocketio.Connect(u, websocket.NewTransport())
-	if err != nil {
-		return
-	}
-
-	// wait until a username has been stored before logging in.
-	for gameCapture.playerName == "" {
-		time.Sleep(time.Second)
-	}
-
-	c.Emit("login", gameCapture.playerID)
-
-	if err := c.On(gosocketio.OnError, sioErrorHandler); err != nil {
-		return
-	}
-
-	sioVariables.online = true
-
-	if err := c.On(gosocketio.OnDisconnect, sioDisconnectHandler); err != nil {
-		return
-	}
-
+	var c *gosocketio.Client
+	var err error
 	for {
-		sioSubmit(*&c)
-		time.Sleep(time.Second / sioFPS)
-	}
 
+		if sioVariables.status == sioStatusDisconnected {
+			for i := 0; i < sioTimeoutAttempts; i++ {
+				debug.Log(fmt.Sprintf("Attempt %d connecting to server.", i+1))
+				c, err = gosocketio.Connect(u, websocket.NewTransport())
+				if err != nil {
+					sioVariables.status = sioStatusConnecting
+					debug.Log("Error connecting to server.")
+					time.Sleep(time.Second)
+					continue
+				}
+				break
+			}
+		}
+
+		if sioVariables.status == sioStatusConnecting {
+			debug.Log("Connection to server timed out.")
+			sioVariables.status = sioStatusTimeout
+			return
+		}
+
+		if err := c.On(gosocketio.OnDisconnect, sioDisconnectHandler); err != nil {
+			return
+		}
+
+		if err := c.On(gosocketio.OnError, sioErrorHandler); err != nil {
+			return
+		}
+
+		sioVariables.status = sioStatusConnected
+		debug.Log("Connected to server.")
+
+		// wait until a username has been stored before logging in.
+		for gameCapture.GetStatus() == statusConnecting || gameCapture.GetStatus() == statusNotConnected || gameCapture.playerID > 1000000 {
+			if sioVariables.status == sioStatusDisconnected {
+				break
+			}
+			debug.Log("sio checking if dd.exe is connected.")
+			time.Sleep(time.Second)
+		}
+
+		if sioVariables.status == sioStatusDisconnected {
+			continue
+		}
+
+		// Allow time to fetch userID from server
+		// there might be a safer way to do this.
+		time.Sleep(time.Second)
+
+		debug.Log(gameCapture.playerName)
+		debug.Log(gameCapture.playerID)
+
+		if sioVariables.status == sioStatusConnected {
+			c.Emit("login", gameCapture.playerID)
+		} else {
+			continue
+		}
+
+		sioVariables.status = sioStatusLoggedIn
+
+		for {
+			if sioVariables.status == sioStatusDisconnected || gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
+				break
+			}
+			sioSubmit(*&c)
+			time.Sleep(time.Second / sioFPS)
+		}
+	}
 }
 
 func sioSubmit(c *gosocketio.Client) {
@@ -111,10 +166,10 @@ func sioSubmit(c *gosocketio.Client) {
 
 func sioErrorHandler(err error) {
 	debug.Log(err.Error())
-	sioVariables.online = false
+	sioVariables.status = sioStatusDisconnected
 }
 
 func sioDisconnectHandler() {
 	debug.Log("Disconnected.")
-	sioVariables.online = false
+	sioVariables.status = sioStatusDisconnected
 }

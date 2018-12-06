@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/atotto/clipboard"
 )
 
 func getMotd() {
@@ -61,6 +63,7 @@ func submitGame(gr GameRecording) {
 
 	if v, ok := result["game_id"]; ok {
 		lastGameURL = fmt.Sprintf("https://ddstats.com/game_log/%v", v)
+		clipboard.WriteAll(lastGameURL)
 	} else if v, ok := result["message"]; ok {
 		lastGameURL = v.(string)
 	} else {

@@ -235,12 +235,21 @@ func classicLayout() {
 
 			if gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
 				onlineLabel.Text = "                    "
-			} else if sioVariables.online == true {
-				onlineLabel.TextFgColor = ui.StringToAttribute("green")
-				onlineLabel.Text = "    [[ Online ]]    "
 			} else {
-				onlineLabel.TextFgColor = ui.StringToAttribute("yellow")
-				onlineLabel.Text = "[[ Connecting... ]]"
+				switch sioVariables.status {
+				case sioStatusDisconnected:
+					onlineLabel.TextFgColor = ui.StringToAttribute("red")
+					onlineLabel.Text = "[[ Disconnected ]]"
+				case sioStatusConnecting:
+					onlineLabel.TextFgColor = ui.StringToAttribute("yellow")
+					onlineLabel.Text = "[[ Connecting... ]]"
+				case sioStatusLoggedIn:
+					onlineLabel.TextFgColor = ui.StringToAttribute("green")
+					onlineLabel.Text = "    [[ Online ]]    "
+				case sioStatusConnected:
+					onlineLabel.TextFgColor = ui.StringToAttribute("green")
+					onlineLabel.Text = "  [[ Connected ]]  "
+				}
 			}
 			onlineLabel.X = ui.TermWidth()/2 - len(onlineLabel.Text)/2
 
