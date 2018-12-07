@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	version        = "0.4.0"
+	version        = "0.4.2"
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 	captureFPS     = 30
 	sioFPS         = 3

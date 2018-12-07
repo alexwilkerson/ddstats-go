@@ -117,7 +117,7 @@ func (gsv *gameStringVariable) GetVariable() interface{} {
 
 type gameReplayIDVariable struct {
 	replayIDVariable gameVariable
-	variable         int
+	variable         int32
 }
 
 func (gridv *gameReplayIDVariable) GetVariable() interface{} {
@@ -126,7 +126,7 @@ func (gridv *gameReplayIDVariable) GetVariable() interface{} {
 
 func (gridv *gameReplayIDVariable) Get() {
 	gridv.replayIDVariable.Get()
-	gridv.variable = gridv.replayIDVariable.variable.(int)
+	gridv.variable = gridv.replayIDVariable.variable.(int32)
 	gridv.replayIDVariable.variable = "XXXXXX"
 }
 
@@ -348,7 +348,7 @@ func (gc *GameCapture) GetReplayPlayerVariables() {
 			gc.replayPlayerID = playerID.GetVariable().(int32)
 		} else {
 			replayPlayerID.Get()
-			gc.replayPlayerID = replayPlayerID.GetVariable().(int32)
+			gc.replayPlayerID = int32(replayPlayerID.GetVariable().(int))
 		}
 		gc.replayPlayerName = replayPlayerName.GetVariable().(string)
 	}
@@ -465,6 +465,14 @@ func (gc *GameCapture) GetGameVariables() {
 				// Stop the game from recording, send a copy to the server,
 				// reset the gameRecording struct, update the display,
 				// reset the gameCapture struct
+
+				// check one last time to make sure these variables are set.
+				// This is to fix a bug I noticed where empty names were
+				// submitted to the server
+				if gc.playerName == "" || gc.playerID == -1 {
+					gc.GetPlayerVariables()
+				}
+
 				gameRecording.Stop()
 				sioVariables.Update()
 				go submitGame(gameRecording)
@@ -495,6 +503,7 @@ func (gc *GameCapture) GetGameVariables() {
 				} else {
 					gc.survivalHash = ""
 					gc.status = statusInMainMenu
+					sioVariables.Update()
 				}
 				return
 			}

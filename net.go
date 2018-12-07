@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/atotto/clipboard"
 )
 
 func getMotd() {
@@ -64,7 +62,10 @@ func submitGame(gr GameRecording) {
 
 	if v, ok := result["game_id"]; ok {
 		lastGameURL = fmt.Sprintf("https://ddstats.com/game_log/%v", v)
-		clipboard.WriteAll(lastGameURL)
+		// clipboard.WriteAll(lastGameURL)
+		if sioVariables.status == sioStatusLoggedIn {
+			sioClient.Emit("game_submitted", result["game_id"])
+		}
 	} else if v, ok := result["message"]; ok {
 		lastGameURL = v.(string)
 	} else {

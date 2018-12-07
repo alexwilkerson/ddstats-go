@@ -52,10 +52,14 @@ func (siov *SioVariables) Update() {
 	siov.isReplay = gameCapture.isReplay
 	if gameCapture.GetStatus() == statusIsDead {
 		siov.deathType = gameCapture.deathType
-	} else {
+	} else if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
 		siov.deathType = -1
+	} else {
+		siov.deathType = -2
 	}
 }
+
+var sioClient *gosocketio.Client
 
 func liveStreamStats() {
 	u := url.URL{
@@ -63,19 +67,18 @@ func liveStreamStats() {
 		Host:   "ddstats.com",
 	}
 
-	var c *gosocketio.Client
 	var err error
 
 	for {
 
 		for gameCapture.GetStatus() == statusNotConnected {
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 2)
 		}
 
 		if sioVariables.status == sioStatusDisconnected {
 			for i := 0; i < sioTimeoutAttempts; i++ {
 				debug.Log(fmt.Sprintf("Attempt %d connecting to server.", i+1))
-				c, err = gosocketio.Connect(u, websocket.NewTransport())
+				sioClient, err = gosocketio.Connect(u, websocket.NewTransport())
 				if err != nil {
 					sioVariables.status = sioStatusConnecting
 					debug.Log("Error connecting to server.")
@@ -92,11 +95,11 @@ func liveStreamStats() {
 			return
 		}
 
-		if err := c.On(gosocketio.OnDisconnect, sioDisconnectHandler); err != nil {
+		if err := sioClient.On(gosocketio.OnDisconnect, sioDisconnectHandler); err != nil {
 			return
 		}
 
-		if err := c.On(gosocketio.OnError, sioErrorHandler); err != nil {
+		if err := sioClient.On(gosocketio.OnError, sioErrorHandler); err != nil {
 			return
 		}
 
@@ -125,7 +128,7 @@ func liveStreamStats() {
 		debug.Log(gameCapture.playerID)
 
 		if sioVariables.status == sioStatusConnected {
-			c.Emit("login", gameCapture.playerID)
+			sioClient.Emit("login", gameCapture.playerID)
 		} else {
 			continue
 		}
@@ -134,12 +137,12 @@ func liveStreamStats() {
 
 		for {
 			if sioVariables.status == sioStatusDisconnected || gameCapture.GetStatus() == statusNotConnected || gameCapture.GetStatus() == statusConnecting {
-				c.Close()
+				sioClient.Close()
 				break
 			}
-			err := sioSubmit(*&c)
+			err := sioSubmit(*&sioClient)
 			if err != nil {
-				c.Close()
+				sioClient.Close()
 				break
 			}
 			time.Sleep(time.Second / sioFPS)
@@ -148,7 +151,11 @@ func liveStreamStats() {
 }
 
 func sioSubmit(c *gosocketio.Client) error {
-	if gameCapture.GetStatus() == statusIsPlaying || (gameCapture.GetStatus() == statusIsDead && sioVariables.deathScreenSent == false) {
+	if gameCapture.GetStatus() == statusIsPlaying ||
+		gameCapture.GetStatus() == statusIsReplay ||
+		(gameCapture.GetStatus() == statusIsDead && sioVariables.deathScreenSent == false) ||
+		gameCapture.GetStatus() == statusInMainMenu {
+
 		if gameCapture.GetStatus() == statusIsDead {
 			sioVariables.deathScreenSent = true
 		} else if gameCapture.GetStatus() == statusIsPlaying {

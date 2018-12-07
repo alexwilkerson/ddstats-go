@@ -5,8 +5,11 @@ import (
 	"time"
 
 	"github.com/TheTitanrain/w32"
+	"github.com/atotto/clipboard"
 	ui "github.com/gizak/termui"
 )
+
+var lastGameURLCopyTime time.Time
 
 type statDisplay struct {
 	timer         float32
@@ -70,6 +73,7 @@ func (sd *statDisplay) Reset() {
 func setupHandles() {
 	ui.Handle("<f10>", quit)
 	ui.Handle("<f9>", toggleDebug)
+	ui.Handle("<MouseLeft>", copyGameURLToClipboard)
 }
 
 func toggleDebug(ui.Event) {
@@ -80,6 +84,13 @@ func toggleDebug(ui.Event) {
 func quit(ui.Event) {
 	w32.CloseHandle(handle)
 	ui.StopLoop()
+}
+
+func copyGameURLToClipboard(ui.Event) {
+	if lastGameURL[:5] == "https" {
+		lastGameURLCopyTime = time.Now()
+		clipboard.WriteAll(lastGameURL)
+	}
 }
 
 func classicLayout() {
@@ -256,7 +267,7 @@ func classicLayout() {
 			}
 			onlineLabel.X = ui.TermWidth()/2 - len(onlineLabel.Text)/2
 
-			if gameCapture.GetStatus() == statusIsPlaying {
+			if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
 				recordingLabel.TextFgColor = ui.StringToAttribute("bold, green")
 				recordingLabel.Text = "  [[ Recording ]]  "
 			} else {
@@ -293,7 +304,11 @@ func classicLayout() {
 			statsLeft.Text = fmt.Sprintf("%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, accuracyString)
 			statsRight.Text = fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n", gemsString, homingString, enemiesAliveString, enemiesKilledString)
 
-			lastGameLabel.Text = "Last Submission: " + lastGameURL
+			if time.Since(lastGameURLCopyTime).Seconds() < 1.5 {
+				lastGameLabel.Text = "Last Submission: (copied to clipboard)"
+			} else {
+				lastGameLabel.Text = "Last Submission: " + lastGameURL
+			}
 
 			ui.Render(statsLeft, statsRight, lastGameLabel)
 		}
