@@ -1,5 +1,38 @@
-# This configuration file is used for the ddstats.exe program. It must
-# exist within the same directory as ddstats.exe.
+# "get_motd" retrieve the message of the day from ddstats.com.
+# "check_for_updates" check whether there is a new version of ddstats available.
+# "auto_update" if an update is available, update the exe file automatically.
+# "classic_mode" show the classic display for ddstats.
+# "offline_mode" if set to true, all networking features will be disabled; the [stream] and [submit] sections will be disabled automatically.
+get_motd = true
+check_for_updates = true
+# auto_update = true
+# classic_mode = true
+offline_mode = false
 
-classic_mode = true
-stream_stats = true
+# "auto_clipboard_game" if set to true, the clipboard will be automatically populated with the ddstats url of your last game once it has finished submitting to the server.
+auto_clipboard_game = false
+
+# These options are for whether ddstats sends your live game stats to ddstats.com.
+# "stats" are your stats in a normal run.
+# "replay_stats" are stats while you're watching a replay.
+# "non_default_spawnsets" are stats in a run where you are using an alternative survival file.
+[stream]
+stats = true
+replay_stats = true
+non_default_spawnsets = true
+
+# These options are for whether ddstats submits your completed games to ddstats.com.
+# "stats" are your stats in a normal run.
+# "replay_stats" are stats while you're watching a replay.
+# "non_default_spawnsets" are stats in a run where you are using an alternative survival file.
+[submit]
+stats = true
+replay_stats = true
+non_default_spawnsets = true
+
+# By default, if your game goes above 1000 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
+# "notify_above_1000" notifies when your score goes above 1000 seconds.
+# "notify_player_best" notifies when your score goes above your current high score.
+[discord]
+notify_above_1000 = true
+notify_player_best = true

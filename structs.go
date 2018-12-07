@@ -182,6 +182,7 @@ func (gr *GameRecording) Stop() {
 	gr.Level2time = gameCapture.level2time
 	gr.Level3time = gameCapture.level3time
 	gr.Level4time = gameCapture.level4time
+	gr.Homing = gameCapture.homing
 	gr.HomingMax = gameCapture.homingMax
 	gr.HomingMaxTime = gameCapture.homingMaxTime
 	gr.DaggersFired = gameCapture.daggersFired
@@ -477,7 +478,7 @@ func (gc *GameCapture) GetGameVariables() {
 				sioVariables.Update()
 				go submitGame(gameRecording)
 				gameRecording.Reset()
-				sd.Update()
+				statDisplay.Update()
 				gameCapture.Reset()
 			}
 		}

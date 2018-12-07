@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/atotto/clipboard"
 )
 
 func getMotd() {
@@ -13,7 +15,9 @@ func getMotd() {
 	jsonValue, _ := json.Marshal(jsonData)
 	resp, err := http.Post("https://ddstats.com/api/get_motd", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
-		motd = "Error getting MOTD."
+		if config.getMOTD {
+			motd = "Error getting MOTD."
+		}
 		return
 	}
 
@@ -22,24 +26,32 @@ func getMotd() {
 	json.NewDecoder(resp.Body).Decode(&result)
 
 	if v, ok := result["motd"]; ok {
-		motd = v.(string)
+		if config.getMOTD {
+			motd = v.(string)
+		}
 	} else {
-		motd = "Error fetching MOTD."
+		if config.getMOTD {
+			motd = "Error fetching MOTD."
+		}
 	}
 	if v, ok := result["valid_version"]; ok {
 		validVersion = v.(bool)
 	}
 	if v, ok := result["update_available"]; ok {
-		updateAvailable = v.(bool)
+		if config.checkForUpdates {
+			updateAvailable = v.(bool)
+		}
 	}
 
 }
 
-type whatever struct {
-	name string
-}
-
 func submitGame(gr GameRecording) {
+	if (config.offlineMode) ||
+		(!config.submit.stats && gr.ReplayPlayerID == 0) ||
+		(!config.submit.replayStats && gr.ReplayPlayerID != 0) ||
+		(!config.submit.nonDefaultSpawnsets && gr.SurvivalHash != v3survivalHash) {
+		return
+	}
 	debug.Log("Submitting Game.")
 	jsonValue, err := json.Marshal(gr)
 	if err != nil {
@@ -62,9 +74,15 @@ func submitGame(gr GameRecording) {
 
 	if v, ok := result["game_id"]; ok {
 		lastGameURL = fmt.Sprintf("https://ddstats.com/game_log/%v", v)
-		// clipboard.WriteAll(lastGameURL)
+		if config.autoClipboardGame {
+			clipboard.WriteAll(lastGameURL)
+		}
 		if sioVariables.status == sioStatusLoggedIn {
-			sioClient.Emit("game_submitted", result["game_id"])
+			if (config.stream.stats && gr.ReplayPlayerID == 0) || (config.stream.replayStats && gr.ReplayPlayerID != 0) {
+				if !(!config.stream.nonDefaultSpawnsets && gr.SurvivalHash != v3survivalHash) {
+					sioClient.Emit("game_submitted", result["game_id"], config.discord.notifyPlayerBest, config.discord.notifyAbove1000)
+				}
+			}
 		}
 	} else if v, ok := result["message"]; ok {
 		lastGameURL = v.(string)

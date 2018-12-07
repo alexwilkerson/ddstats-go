@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	version        = "0.4.2"
+	version        = "0.4.3"
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 	captureFPS     = 30
 	sioFPS         = 3
@@ -54,7 +54,7 @@ var (
 	gameCapture      GameCapture
 	gameRecording    GameRecording
 	sioVariables     SioVariables
-	sd               statDisplay
+	statDisplay      StatDisplay
 )
 
 var (

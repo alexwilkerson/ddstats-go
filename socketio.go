@@ -38,24 +38,26 @@ type SioVariables struct {
 }
 
 func (siov *SioVariables) Update() {
-	siov.playerID = gameCapture.playerID
-	siov.timer = gameCapture.timer
-	siov.totalGems = gameCapture.totalGems
-	siov.homing = gameCapture.homing
-	siov.enemiesAlive = gameCapture.enemiesAlive
-	siov.enemiesKilled = gameCapture.enemiesKilled
-	siov.daggersHit = gameCapture.daggersHit
-	siov.daggersFired = gameCapture.daggersFired
-	siov.level2time = gameCapture.level2time
-	siov.level3time = gameCapture.level3time
-	siov.level4time = gameCapture.level4time
-	siov.isReplay = gameCapture.isReplay
-	if gameCapture.GetStatus() == statusIsDead {
-		siov.deathType = gameCapture.deathType
-	} else if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
-		siov.deathType = -1
-	} else {
-		siov.deathType = -2
+	if !config.offlineMode {
+		siov.playerID = gameCapture.playerID
+		siov.timer = gameCapture.timer
+		siov.totalGems = gameCapture.totalGems
+		siov.homing = gameCapture.homing
+		siov.enemiesAlive = gameCapture.enemiesAlive
+		siov.enemiesKilled = gameCapture.enemiesKilled
+		siov.daggersHit = gameCapture.daggersHit
+		siov.daggersFired = gameCapture.daggersFired
+		siov.level2time = gameCapture.level2time
+		siov.level3time = gameCapture.level3time
+		siov.level4time = gameCapture.level4time
+		siov.isReplay = gameCapture.isReplay
+		if gameCapture.GetStatus() == statusIsDead {
+			siov.deathType = gameCapture.deathType
+		} else if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
+			siov.deathType = -1
+		} else {
+			siov.deathType = -2
+		}
 	}
 }
 
@@ -161,23 +163,30 @@ func sioSubmit(c *gosocketio.Client) error {
 		} else if gameCapture.GetStatus() == statusIsPlaying {
 			sioVariables.deathScreenSent = false
 		}
-		if err := c.Emit(
-			"submit",
-			sioVariables.playerID,
-			sioVariables.timer,
-			sioVariables.totalGems,
-			sioVariables.homing,
-			sioVariables.enemiesAlive,
-			sioVariables.enemiesKilled,
-			sioVariables.daggersHit,
-			sioVariables.daggersFired,
-			sioVariables.level2time,
-			sioVariables.level3time,
-			sioVariables.level4time,
-			sioVariables.isReplay,
-			sioVariables.deathType,
-		); err != nil {
-			return err
+		if (config.stream.stats && !sioVariables.isReplay) || (sioVariables.isReplay && config.stream.replayStats) {
+			if !config.stream.nonDefaultSpawnsets && gameCapture.survivalHash != v3survivalHash {
+				return nil
+			}
+			if err := c.Emit(
+				"submit",
+				sioVariables.playerID,
+				sioVariables.timer,
+				sioVariables.totalGems,
+				sioVariables.homing,
+				sioVariables.enemiesAlive,
+				sioVariables.enemiesKilled,
+				sioVariables.daggersHit,
+				sioVariables.daggersFired,
+				sioVariables.level2time,
+				sioVariables.level3time,
+				sioVariables.level4time,
+				sioVariables.isReplay,
+				sioVariables.deathType,
+				config.discord.notifyPlayerBest,
+				config.discord.notifyAbove1000,
+			); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

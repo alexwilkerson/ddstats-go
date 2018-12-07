@@ -17,9 +17,12 @@ func main() {
 
 	setupHandles()
 
-	go getMotd()
-
-	go liveStreamStats()
+	if !config.offlineMode {
+		go getMotd()
+		if config.stream.stats || config.stream.replayStats || config.stream.nonDefaultSpawnsets {
+			go liveStreamStats()
+		}
+	}
 
 	go gameCapture.Run()
 

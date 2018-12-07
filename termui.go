@@ -11,7 +11,7 @@ import (
 
 var lastGameURLCopyTime time.Time
 
-type statDisplay struct {
+type StatDisplay struct {
 	timer         float32
 	daggersHit    int32
 	daggersFired  int32
@@ -34,7 +34,7 @@ const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @
  :::: ::   :::: ::  :::: ::      ::    ::   :::     ::    :::: ::
 :: :  :   :: :  :   :: : :       :      :   : :     :     :: : :`
 
-func (sd *statDisplay) Update() {
+func (sd *StatDisplay) Update() {
 	if gameCapture.status == statusInMainMenu || gameCapture.status == statusInDaggerLobby || gameCapture.status == statusConnecting || gameCapture.status == statusNotConnected {
 		sd.Reset()
 	} else {
@@ -58,7 +58,7 @@ func (sd *statDisplay) Update() {
 	}
 }
 
-func (sd *statDisplay) Reset() {
+func (sd *StatDisplay) Reset() {
 	sd.timer = 0.0
 	sd.daggersHit = 0
 	sd.daggersFired = 0
@@ -138,17 +138,22 @@ func classicLayout() {
 	updateLabel := ui.NewPar("(UPDATE AVAILABLE)")
 	updateLabel.TextFgColor = ui.StringToAttribute("green")
 	updateLabel.Border = false
-	updateLabel.X = ui.TermWidth()/2 - 9
+	updateLabel.X = ui.TermWidth()/2 - 34
 	updateLabel.Y = 0
 	updateLabel.Width = 19
 	updateLabel.Height = 1
 
-	motdLabel := ui.NewPar("Fetching MOTD.")
+	motdLabel := ui.NewPar("")
 	motdLabel.X = ui.TermWidth()/2 - 7
 	motdLabel.Border = false
 	motdLabel.Y = 12
 	motdLabel.Height = 1
 	motdLabel.Width = 14
+	if config.offlineMode || !config.getMOTD {
+		motdLabel.Text = ""
+	} else {
+		motdLabel.Text = "Fetching MOTD."
+	}
 
 	statusLabel := ui.NewPar("")
 	statusLabel.Border = false
@@ -194,7 +199,7 @@ func classicLayout() {
 
 	for {
 		if gameCapture.GetStatus() != statusIsDead {
-			sd.Update()
+			statDisplay.Update()
 		}
 
 		if debugWindowVisible {
@@ -282,24 +287,24 @@ func classicLayout() {
 				ui.Render(updateLabel)
 			}
 
-			timerString := fmt.Sprintf("In Game Timer: %.4fs", sd.timer)
-			daggersHitString := fmt.Sprintf("Daggers Hit: %d", sd.daggersHit)
-			daggersFiredString := fmt.Sprintf("Daggers Fired: %d", sd.daggersFired)
-			accuracyString := fmt.Sprintf("Accuracy: %.2f%%", sd.accuracy)
+			timerString := fmt.Sprintf("In Game Timer: %.4fs", statDisplay.timer)
+			daggersHitString := fmt.Sprintf("Daggers Hit: %d", statDisplay.daggersHit)
+			daggersFiredString := fmt.Sprintf("Daggers Fired: %d", statDisplay.daggersFired)
+			accuracyString := fmt.Sprintf("Accuracy: %.2f%%", statDisplay.accuracy)
 			var gemsString string
-			if sd.totalGems == -1 {
+			if statDisplay.totalGems == -1 {
 				gemsString = "Gems: HIDDEN"
 			} else {
-				gemsString = fmt.Sprintf("Gems: %d", sd.totalGems)
+				gemsString = fmt.Sprintf("Gems: %d", statDisplay.totalGems)
 			}
 			var homingString string
-			if sd.homing == -1 {
+			if statDisplay.homing == -1 {
 				homingString = "Homing Daggers: HIDDEN"
 			} else {
-				homingString = fmt.Sprintf("Homing Daggers: %d", sd.homing)
+				homingString = fmt.Sprintf("Homing Daggers: %d", statDisplay.homing)
 			}
-			enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", sd.enemiesAlive)
-			enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", sd.enemiesKilled)
+			enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", statDisplay.enemiesAlive)
+			enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", statDisplay.enemiesKilled)
 
 			statsLeft.Text = fmt.Sprintf("%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, accuracyString)
 			statsRight.Text = fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n", gemsString, homingString, enemiesAliveString, enemiesKilledString)
