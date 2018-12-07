@@ -20,21 +20,23 @@ const (
 const sioTimeoutAttempts = 60
 
 type SioVariables struct {
-	status          int32
-	playerID        int32
-	timer           float32
-	totalGems       int32
-	homing          int32
-	enemiesAlive    int32
-	enemiesKilled   int32
-	daggersHit      int32
-	daggersFired    int32
-	level2time      float32
-	level3time      float32
-	level4time      float32
-	isReplay        bool
-	deathType       int32
-	deathScreenSent bool
+	status           int32
+	playerID         int32
+	timer            float32
+	totalGems        int32
+	homing           int32
+	enemiesAlive     int32
+	enemiesKilled    int32
+	daggersHit       int32
+	daggersFired     int32
+	level2time       float32
+	level3time       float32
+	level4time       float32
+	isReplay         bool
+	deathType        int32
+	notifyPlayerBest bool
+	notifyAbove1000  bool
+	deathScreenSent  bool
 }
 
 func (siov *SioVariables) Update() {
@@ -57,6 +59,14 @@ func (siov *SioVariables) Update() {
 			siov.deathType = -1
 		} else {
 			siov.deathType = -2
+		}
+		// Do not send discord notifications for alternate spawnsets
+		if !gameCapture.v3 {
+			siov.notifyPlayerBest = false
+			siov.notifyAbove1000 = false
+		} else {
+			siov.notifyPlayerBest = config.discord.notifyPlayerBest
+			siov.notifyAbove1000 = config.discord.notifyAbove1000
 		}
 	}
 }
@@ -182,8 +192,8 @@ func sioSubmit(c *gosocketio.Client) error {
 				sioVariables.level4time,
 				sioVariables.isReplay,
 				sioVariables.deathType,
-				config.discord.notifyPlayerBest,
-				config.discord.notifyAbove1000,
+				sioVariables.notifyPlayerBest,
+				sioVariables.notifyAbove1000,
 			); err != nil {
 				return err
 			}

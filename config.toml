@@ -1,7 +1,7 @@
 # "get_motd" retrieve the message of the day from ddstats.com.
 # "check_for_updates" check whether there is a new version of ddstats available.
-# "auto_update" if an update is available, update the exe file automatically.
-# "classic_mode" show the classic display for ddstats.
+# "auto_update" if an update is available, update the exe file automatically. (not yet implemented)
+# "classic_mode" show the classic display for ddstats. (not yet implemented)
 # "offline_mode" if set to true, all networking features will be disabled; the [stream] and [submit] sections will be disabled automatically.
 get_motd = true
 check_for_updates = true
