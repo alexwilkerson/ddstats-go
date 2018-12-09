@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	version        = "0.4.3"
+	version        = "0.4.4"
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
-	captureFPS     = 30
+	captureFPS     = 36
 	sioFPS         = 3
 	uiFPS          = 2
 )
@@ -73,22 +73,22 @@ var (
 )
 
 var (
-	timer         = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1A0}, variable: 0.0}
-	playerID      = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x5C}, variable: 0}
-	totalGems     = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1C0}, variable: 0}
-	daggersFired  = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B4}, variable: 0}
-	daggersHit    = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B8}, variable: 0}
-	enemiesAlive  = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1FC}, variable: 0}
-	enemiesKilled = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1BC}, variable: 0}
-	deathType     = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1C4}, variable: 0}
+	timer         = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1A0}, variable: float32(0.0)}
+	playerID      = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x5C}, variable: int32(0)}
+	totalGems     = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1C0}, variable: int32(0)}
+	daggersFired  = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B4}, variable: int32(0)}
+	daggersHit    = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B8}, variable: int32(0)}
+	enemiesAlive  = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1FC}, variable: int32(0)}
+	enemiesKilled = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1BC}, variable: int32(0)}
+	deathType     = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1C4}, variable: int32(0)}
 	isAlive       = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1A4}, variable: false}
 	isReplay      = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x35D}, variable: false}
 )
 
 var (
-	homing = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x224}, variable: 0}
-	gems   = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x218}, variable: 0}
-	isDead = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0xCC}, variable: 0}
+	homing = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x224}, variable: int32(0)}
+	gems   = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0x218}, variable: int32(0)}
+	isDead = gameVariable{parentOffset: gameAddress, offsets: []address{0x0, 0xCC}, variable: int32(0)}
 )
 
 var replayPlayerID = gameReplayIDVariable{

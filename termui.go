@@ -42,15 +42,14 @@ func (sd *StatDisplay) Update() {
 		sd.daggersHit = gameCapture.daggersHit
 		sd.daggersFired = gameCapture.daggersFired
 		sd.accuracy = gameCapture.accuracy
+		sd.homing = gameCapture.homing
 		if gameCapture.GetStatus() == statusIsPlaying {
 			sd.totalGems = -1
 			sd.homing = -1
 		} else if gameCapture.GetStatus() == statusIsDead {
 			sd.totalGems = gameCapture.totalGemsAtDeath
-			sd.homing = gameCapture.homingAtDeath
 		} else {
 			sd.totalGems = gameCapture.totalGems
-			sd.homing = gameCapture.homing
 		}
 		sd.enemiesAlive = gameCapture.enemiesAlive
 		sd.enemiesKilled = gameCapture.enemiesKilled
@@ -94,6 +93,36 @@ func copyGameURLToClipboard(ui.Event) {
 }
 
 func classicLayout() {
+	for {
+		ui.Clear()
+		switch {
+		case validVersion == false:
+			invalidVersionLayout()
+		case gameCapture.GetStatus() == statusIsDead:
+			gameLogLayout()
+		default:
+			defaultLayout()
+		}
+	}
+}
+
+func invalidVersionLayout() {
+	for validVersion == false {
+		invalidVersionWindow := ui.NewPar("This version of DDSTATS is invalid. Please visit\nhttps://www.ddstats.com/releases to download the\nnewest version.")
+		invalidVersionWindow.Width = 52
+		invalidVersionWindow.Height = 5
+		invalidVersionWindow.Y = 4
+		invalidVersionWindow.X = ui.TermWidth()/2 - invalidVersionWindow.Width/2
+		invalidVersionWindow.BorderLabel = "Invalid Version"
+		invalidVersionWindow.BorderFg = ui.ColorRed
+		invalidVersionWindow.BorderLabelFg = ui.ColorYellow
+
+		ui.Render(invalidVersionWindow)
+		time.Sleep(time.Minute)
+	}
+}
+
+func defaultLayout() {
 	debugWindow := ui.NewPar(debug.log)
 	debugWindow.TextFgColor = ui.StringToAttribute("black")
 	debugWindow.TextBgColor = ui.StringToAttribute("white")
@@ -197,7 +226,7 @@ func classicLayout() {
 	lastGameLabel.Height = 1
 	lastGameLabel.Width = 66
 
-	for {
+	for gameCapture.GetStatus() != statusIsDead {
 		if gameCapture.GetStatus() != statusIsDead {
 			statDisplay.Update()
 		}
@@ -319,5 +348,60 @@ func classicLayout() {
 		}
 		time.Sleep(time.Second / uiFPS)
 	}
+}
 
+func gameLogLayout() {
+	statsLeft := ui.NewPar("")
+	statsLeft.SetX(ui.TermWidth()/2 - 34)
+	statsLeft.SetY(2)
+	statsLeft.Border = false
+	statsLeft.Width = 34
+	statsLeft.Height = 5
+
+	statsRight := ui.NewPar("")
+	statsRight.SetX(ui.TermWidth() / 2)
+	statsRight.SetY(2)
+	statsRight.Border = false
+	statsRight.Width = 34
+	statsRight.Height = 5
+
+	lastGameLabel := ui.NewPar("Last Submission: " + lastGameURL)
+	lastGameLabel.Border = false
+	lastGameLabel.X = ui.TermWidth()/2 - 34
+	lastGameLabel.Y = 10
+	lastGameLabel.Height = 1
+	lastGameLabel.Width = 66
+
+	for gameCapture.GetStatus() == statusIsDead {
+		timerString := fmt.Sprintf("In Game Timer: %.4fs", statDisplay.timer)
+		daggersHitString := fmt.Sprintf("Daggers Hit: %d", statDisplay.daggersHit)
+		daggersFiredString := fmt.Sprintf("Daggers Fired: %d", statDisplay.daggersFired)
+		accuracyString := fmt.Sprintf("Accuracy: %.2f%%", statDisplay.accuracy)
+		var gemsString string
+		if statDisplay.totalGems == -1 {
+			gemsString = "Gems: HIDDEN"
+		} else {
+			gemsString = fmt.Sprintf("Gems: %d", statDisplay.totalGems)
+		}
+		var homingString string
+		if statDisplay.homing == -1 {
+			homingString = "Homing Daggers: HIDDEN"
+		} else {
+			homingString = fmt.Sprintf("Homing Daggers: %d", statDisplay.homing)
+		}
+		enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", statDisplay.enemiesAlive)
+		enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", statDisplay.enemiesKilled)
+
+		statsLeft.Text = fmt.Sprintf("%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, accuracyString)
+		statsRight.Text = fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n", gemsString, homingString, enemiesAliveString, enemiesKilledString)
+
+		if time.Since(lastGameURLCopyTime).Seconds() < 1.5 {
+			lastGameLabel.Text = "Last Submission: (copied to clipboard)"
+		} else {
+			lastGameLabel.Text = "Last Submission: " + lastGameURL
+		}
+
+		ui.Render(statsLeft, statsRight, lastGameLabel)
+		time.Sleep(time.Second)
+	}
 }

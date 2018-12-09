@@ -183,6 +183,7 @@ func (gr *GameRecording) Stop() {
 	gr.Level3time = gameCapture.level3time
 	gr.Level4time = gameCapture.level4time
 	gr.Homing = gameCapture.homing
+	gr.HomingSlice = append(gr.HomingSlice, gameCapture.homing)
 	gr.HomingMax = gameCapture.homingMax
 	gr.HomingMaxTime = gameCapture.homingMaxTime
 	gr.DaggersFired = gameCapture.daggersFired
@@ -249,7 +250,6 @@ type GameCapture struct {
 	survivalHash             string
 	v3                       bool
 	isAlive                  bool
-	isDead                   int32
 	isReplay                 bool
 	playerID                 int32
 	playerName               string
@@ -264,8 +264,8 @@ type GameCapture struct {
 	level3time               float32
 	level4time               float32
 	homing                   int32
-	homingAtDeath            int32
 	homingMax                int32
+	homingMaxPerSecond       int32
 	homingMaxTime            float32
 	enemiesAlive             int32
 	enemiesAliveMaxPerSecond int32
@@ -292,9 +292,9 @@ func (gc *GameCapture) Reset() {
 	gc.level3time = 0.0
 	gc.level4time = 0.0
 	gc.homing = 0
-	gc.homingAtDeath = 0
 	homing.Reset(0)
 	gc.homingMax = 0
+	gc.homingMaxPerSecond = 0
 	gc.homingMaxTime = 0.0
 	gc.enemiesAlive = 0
 	gc.enemiesAliveMaxPerSecond = 0
@@ -385,7 +385,8 @@ func (gc *GameCapture) GetGameVariables() {
 	} else {
 
 		// if you have a handle, grab all of the variables from the game
-		gc.wg.Add(10)
+		gc.wg.Add(11)
+		go isDead.AsyncGet(&gc.wg)
 		go isAlive.AsyncGet(&gc.wg)
 		go isReplay.AsyncGet(&gc.wg)
 		go timer.AsyncGet(&gc.wg)
@@ -402,85 +403,79 @@ func (gc *GameCapture) GetGameVariables() {
 
 		// If dead and previously were alive, this means the player just died
 		// so the game must then be completed and sent to the server.
-		if !isAlive.GetVariable().(bool) && isAlive.GetPreviousVariable().(bool) {
-			isDead.Get()
-			// Make absolutely sure we are on the death screen and make sure not to send empty data.
-			if isDead.GetVariable() == ddDeathStatus && !gameRecording.WasReset() {
-				if gc.isReplay {
-					gc.GetReplayPlayerVariables()
-				}
+		if isDead.GetPreviousVariable().(int32) != ddDeathStatus && isDead.GetVariable().(int32) == ddDeathStatus && !gameRecording.WasReset() {
 
-				gc.status = statusIsDead
-
-				deathType.Get()
-				gc.deathType = deathType.GetVariable().(int32)
-				// if deathType is invalid, make it 0 (FALLEN) by default. This is just to make sure
-				// some strange memory address was read.
-				if gc.deathType < 0 || gc.deathType > 15 {
-					gc.deathType = 0
-				}
-
-				gc.timer = timer.GetVariable().(float32)
-				// this accounts for totalGems being reset on death.
-				gc.totalGems = totalGems.previousVariable.(int32)
-				// this accounts for homing being reset on death.
-				// there might be a more elegent solution for this.
-				if len(gameRecording.HomingSlice) > 0 {
-					gc.homing = gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1]
-					gameRecording.HomingSlice = append(gameRecording.HomingSlice, gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1])
-				}
-				if gc.homing > gc.homingMax {
-					gc.homingMax = gc.homing
-					gc.homingMaxTime = gc.timer
-				}
-				// Sometimes homing drops below zero. This fixes recording that.
-				if gc.homing < 0 {
-					gc.homing = 0
-				}
-				if gc.enemiesAlive > gc.enemiesAliveMax {
-					gc.enemiesAliveMax = gc.enemiesAlive
-					gc.enemiesAliveMaxTime = gc.timer
-				}
-				// This might be off, may need to do more testing.
-				if gc.enemiesAliveMaxPerSecond > gc.enemiesAlive {
-					gc.enemiesAlive = gc.enemiesAliveMaxPerSecond
-				}
-				gc.enemiesAlive = enemiesAlive.GetVariable().(int32)
-				gc.enemiesKilled = enemiesKilled.GetVariable().(int32)
-				gc.daggersFired = daggersFired.GetVariable().(int32)
-				gc.daggersHit = daggersHit.GetVariable().(int32)
-				gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int32)
-				if len(gameRecording.HomingSlice) > 0 {
-					gc.homingAtDeath = gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1]
-				}
-				if gc.level2time == 0.0 && gc.gems >= 10 {
-					gc.level2time = gc.timer
-				}
-				if gc.level3time == 0.0 && gc.gems == 70 {
-					gc.level3time = gc.timer
-				}
-				if gc.level4time == 0.0 && gc.gems == 71 {
-					gc.level4time = gc.timer
-				}
-
-				// Stop the game from recording, send a copy to the server,
-				// reset the gameRecording struct, update the display,
-				// reset the gameCapture struct
-
-				// check one last time to make sure these variables are set.
-				// This is to fix a bug I noticed where empty names were
-				// submitted to the server
-				if gc.playerName == "" || gc.playerID == -1 {
-					gc.GetPlayerVariables()
-				}
-
-				gameRecording.Stop()
-				sioVariables.Update()
-				go submitGame(gameRecording)
-				gameRecording.Reset()
-				statDisplay.Update()
-				gameCapture.Reset()
+			if gc.isReplay {
+				gc.GetReplayPlayerVariables()
 			}
+
+			gc.status = statusIsDead
+
+			deathType.Get()
+			gc.deathType = deathType.GetVariable().(int32)
+			// if deathType is invalid, make it 0 (FALLEN) by default. This is just to make sure
+			// some strange memory address was read.
+			if gc.deathType < 0 || gc.deathType > 15 {
+				gc.deathType = 0
+			}
+
+			gc.timer = timer.GetVariable().(float32)
+			// this accounts for totalGems being reset on death.
+			gc.totalGems = totalGems.GetPreviousVariable().(int32)
+			// this accounts for homing being reset on death.
+			// there might be a more elegent solution for this.
+			gc.homing = homing.GetPreviousVariable().(int32)
+			if gc.homing > gc.homingMax {
+				gc.homingMax = gc.homing
+				gc.homingMaxTime = gc.timer
+			}
+			if gc.homingMaxPerSecond > gc.homing {
+				gc.homing = gc.homingMaxPerSecond
+			}
+			// Sometimes homing drops below zero. This fixes recording that.
+			if gc.homing < 0 {
+				gc.homing = 0
+			}
+			if gc.enemiesAlive > gc.enemiesAliveMax {
+				gc.enemiesAliveMax = gc.enemiesAlive
+				gc.enemiesAliveMaxTime = gc.timer
+			}
+			// This might be off, may need to do more testing.
+			if gc.enemiesAliveMaxPerSecond > gc.enemiesAlive {
+				gc.enemiesAlive = gc.enemiesAliveMaxPerSecond
+			}
+			gc.enemiesAlive = enemiesAlive.GetVariable().(int32)
+			gc.enemiesKilled = enemiesKilled.GetVariable().(int32)
+			gc.daggersFired = daggersFired.GetVariable().(int32)
+			gc.daggersHit = daggersHit.GetVariable().(int32)
+			gc.totalGemsAtDeath = totalGems.GetPreviousVariable().(int32)
+			if gc.level2time == 0.0 && gc.gems >= 10 {
+				gc.level2time = gc.timer
+			}
+			if gc.level3time == 0.0 && gc.gems == 70 {
+				gc.level3time = gc.timer
+			}
+			if gc.level4time == 0.0 && gc.gems == 71 {
+				gc.level4time = gc.timer
+			}
+
+			// Stop the game from recording, send a copy to the server,
+			// reset the gameRecording struct, update the display,
+			// reset the gameCapture struct
+
+			// check one last time to make sure these variables are set.
+			// This is to fix a bug I noticed where empty names were
+			// submitted to the server
+			if gc.playerName == "" || gc.playerID == -1 {
+				gc.GetPlayerVariables()
+			}
+
+			gameRecording.Stop()
+			sioVariables.Update()
+			go submitGame(gameRecording)
+			gameRecording.Reset()
+			statDisplay.Update()
+			gameCapture.Reset()
 		}
 
 		if gc.isAlive {
@@ -548,6 +543,9 @@ func (gc *GameCapture) GetGameVariables() {
 			if gc.homing < 0 {
 				gc.homing = 0
 			}
+			if gc.homingMaxPerSecond > gc.homing {
+				gc.homing = gc.homingMaxPerSecond
+			}
 			if gc.enemiesAlive > gc.enemiesAliveMax {
 				gc.enemiesAliveMax = gc.enemiesAlive
 				gc.enemiesAliveMaxTime = gc.timer
@@ -584,6 +582,9 @@ func (gc *GameCapture) GetGameVariables() {
 				if gc.enemiesAliveMaxPerSecond > gc.enemiesAlive {
 					gc.enemiesAlive = gc.enemiesAliveMaxPerSecond
 				}
+				if gc.homingMaxPerSecond > gc.homing {
+					gc.homing = gc.homingMaxPerSecond
+				}
 				// Sometimes at the beginning of the game the enemiesAlive variable does not reset properly.
 				// this fixes that.
 				if gc.timer < 1.0 {
@@ -591,15 +592,16 @@ func (gc *GameCapture) GetGameVariables() {
 				}
 				gameRecording.RecordVariables()
 				gc.lastRecording = gc.timer
-				// reset enemiesAliveMaxPerSecond to 0 every second.
-				gc.enemiesAliveMaxPerSecond = 0
+				// reset homingMaxPerSecond, enemiesAliveMaxPerSecond to 0 every second.
+				gc.homingMaxPerSecond = homing.GetVariable().(int32)
+				gc.enemiesAliveMaxPerSecond = enemiesAlive.GetVariable().(int32)
 			}
 		} else if gc.playerName == "" {
 			// The isDead variable has one function... If the user starts ddstats
 			// while on the death screen, this variable will be 7 and ddstats will
 			// be able to differentiate from connecting to dd.exe.
 			isDead.Get()
-			if isDead.GetVariable() == 7 {
+			if isDead.GetVariable().(int32) == ddDeathStatus {
 				gc.GetPlayerVariables()
 				gc.status = statusIsDead
 			} else {
@@ -621,6 +623,9 @@ func (gc *GameCapture) GetGameVariables() {
 
 func (gc *GameCapture) Run() {
 	for {
+		if validVersion == false {
+			return
+		}
 		gc.GetGameVariables()
 		time.Sleep(time.Second / captureFPS)
 	}

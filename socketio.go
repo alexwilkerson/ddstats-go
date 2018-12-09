@@ -83,6 +83,10 @@ func liveStreamStats() {
 
 	for {
 
+		if validVersion == false {
+			return
+		}
+
 		for gameCapture.GetStatus() == statusNotConnected {
 			time.Sleep(time.Second * 2)
 		}
@@ -97,6 +101,7 @@ func liveStreamStats() {
 					time.Sleep(time.Second)
 					continue
 				}
+				sioVariables.status = sioStatusDisconnected
 				break
 			}
 		}
@@ -152,12 +157,19 @@ func liveStreamStats() {
 				sioClient.Close()
 				break
 			}
-			err := sioSubmit(*&sioClient)
-			if err != nil {
-				sioClient.Close()
-				break
+			if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
+				if err := sioSubmit(*&sioClient); err != nil {
+					sioClient.Close()
+					break
+				}
+				time.Sleep(time.Second / sioFPS)
+			} else {
+				if err := sioStatusUpdate(*&sioClient); err != nil {
+					sioClient.Close()
+					break
+				}
+				time.Sleep(time.Second)
 			}
-			time.Sleep(time.Second / sioFPS)
 		}
 	}
 }
@@ -198,6 +210,13 @@ func sioSubmit(c *gosocketio.Client) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func sioStatusUpdate(c *gosocketio.Client) error {
+	if err := c.Emit("status_update", gameCapture.playerID, gameCapture.GetStatus()); err != nil {
+		return nil
 	}
 	return nil
 }
