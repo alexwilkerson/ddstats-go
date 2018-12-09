@@ -99,14 +99,17 @@ func liveStreamStats() {
 					sioVariables.status = sioStatusConnecting
 					debug.Log("Error connecting to server.")
 					time.Sleep(time.Second)
+					if i == sioTimeoutAttempts {
+						sioVariables.status = sioStatusDisconnected
+					}
 					continue
 				}
-				sioVariables.status = sioStatusDisconnected
+				sioVariables.status = sioStatusConnecting
 				break
 			}
 		}
 
-		if sioVariables.status == sioStatusConnecting {
+		if sioVariables.status == sioStatusDisconnected {
 			debug.Log("Connection to server timed out.")
 			sioVariables.status = sioStatusTimeout
 			return
