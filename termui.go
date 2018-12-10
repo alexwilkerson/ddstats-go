@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	"github.com/TheTitanrain/w32"
@@ -43,7 +44,7 @@ func (sd *StatDisplay) Update() {
 		sd.daggersFired = gameCapture.daggersFired
 		sd.accuracy = gameCapture.accuracy
 		sd.homing = gameCapture.homing
-		if gameCapture.GetStatus() == statusIsPlaying {
+		if gameCapture.GetStatus() == statusIsPlaying && config.SquirrelMode == false {
 			sd.totalGems = -1
 			sd.homing = -1
 		} else if gameCapture.GetStatus() == statusIsDead {
@@ -69,26 +70,66 @@ func (sd *StatDisplay) Reset() {
 	sd.deathType = 0
 }
 
-func setupHandles() {
-	ui.Handle("<f10>", quit)
-	ui.Handle("<f9>", toggleDebug)
-	ui.Handle("<MouseLeft>", copyGameURLToClipboard)
+func uiLoop() {
+	uiEvents := ui.PollEvents()
+	for {
+		e := <-uiEvents
+		switch e.ID {
+		case "q", "<C-c>", "<f10>":
+			w32.CloseHandle(handle)
+			return
+		case "<f12>":
+			writeDefaultConfigFile()
+		case "<MouseLeft>":
+			copyGameURLToClipboard()
+		case "<f9>":
+			if config.SquirrelMode {
+				toggleDebug()
+			}
+		case "y":
+			if configReadError && !ready {
+				writeDefaultConfigFile()
+				ready = true
+			}
+		case "n":
+			if configReadError && !ready {
+				ready = true
+			}
+		}
+	}
 }
 
-func toggleDebug(ui.Event) {
+func writeDefaultConfigFile() {
+	if err := ioutil.WriteFile("config.toml", []byte(defaultConfigFile), 0644); err != nil {
+		return
+	}
+}
+
+func toggleDebug() {
 	ui.Clear()
 	debugWindowVisible = !debugWindowVisible
 }
 
-func quit(ui.Event) {
-	w32.CloseHandle(handle)
-	ui.StopLoop()
-}
-
-func copyGameURLToClipboard(ui.Event) {
+func copyGameURLToClipboard() {
 	if lastGameURL[:5] == "https" {
 		lastGameURLCopyTime = time.Now()
 		clipboard.WriteAll(lastGameURL)
+	}
+}
+
+func unreadableConfigLayout() {
+	for !ready {
+		unreadableConfigFileWindow := ui.NewParagraph("Was not able to read the config file.\nWould you like to rewrite the config file?\n\n[Y]es      [N]o")
+		unreadableConfigFileWindow.Width = 52
+		unreadableConfigFileWindow.Height = 6
+		unreadableConfigFileWindow.Y = 4
+		unreadableConfigFileWindow.X = ui.TermWidth()/2 - unreadableConfigFileWindow.Width/2
+		unreadableConfigFileWindow.BorderLabel = "Config File Unreadable"
+		unreadableConfigFileWindow.BorderFg = ui.ColorRed
+		unreadableConfigFileWindow.BorderLabelFg = ui.ColorYellow
+
+		ui.Render(unreadableConfigFileWindow)
+		time.Sleep(time.Second / 10)
 	}
 }
 
@@ -98,8 +139,10 @@ func classicLayout() {
 		switch {
 		case validVersion == false:
 			invalidVersionLayout()
-		case gameCapture.GetStatus() == statusIsDead:
-			gameLogLayout()
+		case configReadError && !ready:
+			unreadableConfigLayout()
+		// case gameCapture.GetStatus() == statusIsDead:
+		// 	gameLogLayout()
 		default:
 			defaultLayout()
 		}
@@ -108,7 +151,7 @@ func classicLayout() {
 
 func invalidVersionLayout() {
 	for validVersion == false {
-		invalidVersionWindow := ui.NewPar("This version of DDSTATS is invalid. Please visit\nhttps://www.ddstats.com/releases to download the\nnewest version.")
+		invalidVersionWindow := ui.NewParagraph("This version of DDSTATS is invalid. Please visit\nhttps://www.ddstats.com/releases to download the\nnewest version.")
 		invalidVersionWindow.Width = 52
 		invalidVersionWindow.Height = 5
 		invalidVersionWindow.Y = 4
@@ -123,7 +166,7 @@ func invalidVersionLayout() {
 }
 
 func defaultLayout() {
-	debugWindow := ui.NewPar(debug.log)
+	debugWindow := ui.NewParagraph(debug.log)
 	debugWindow.TextFgColor = ui.StringToAttribute("black")
 	debugWindow.TextBgColor = ui.StringToAttribute("white")
 	debugWindow.Border = true
@@ -133,7 +176,7 @@ func defaultLayout() {
 	debugWindow.Height = ui.TermHeight()
 	debugWindow.Float = ui.AlignBottom
 
-	logo := ui.NewPar(logoString)
+	logo := ui.NewParagraph(logoString)
 	logo.TextFgColor = ui.StringToAttribute("red")
 	logo.Border = false
 	logo.SetX(ui.TermWidth()/2 - 34)
@@ -141,7 +184,7 @@ func defaultLayout() {
 	logo.Width = 67
 	logo.Height = 10
 
-	nameLabel := ui.NewPar("")
+	nameLabel := ui.NewParagraph("")
 	nameLabel.TextFgColor = ui.StringToAttribute("red")
 	nameLabel.Border = false
 	nameLabel.X = ui.TermWidth()/2 - 34
@@ -149,7 +192,7 @@ func defaultLayout() {
 	nameLabel.Width = 34
 	nameLabel.Height = 1
 
-	versionLabel := ui.NewPar("v" + version)
+	versionLabel := ui.NewParagraph("v" + version)
 	versionLabel.TextFgColor = ui.StringToAttribute("red")
 	versionLabel.Border = false
 	versionLabel.X = ui.TermWidth()/2 + 31 - (len(version) + 1)
@@ -157,14 +200,14 @@ func defaultLayout() {
 	versionLabel.Width = len(version) + 1
 	versionLabel.Height = 1
 
-	exitLabel := ui.NewPar("[F10] Exit")
+	exitLabel := ui.NewParagraph("[F10] Exit | [F12] Reset Config File")
 	exitLabel.Border = false
 	exitLabel.X = ui.TermWidth()/2 - 34
 	exitLabel.Y = 21
 	exitLabel.Height = 1
-	exitLabel.Width = 10
+	exitLabel.Width = len(exitLabel.Text)
 
-	updateLabel := ui.NewPar("(UPDATE AVAILABLE)")
+	updateLabel := ui.NewParagraph("(UPDATE AVAILABLE)")
 	updateLabel.TextFgColor = ui.StringToAttribute("green")
 	updateLabel.Border = false
 	updateLabel.X = ui.TermWidth()/2 - 34
@@ -172,61 +215,61 @@ func defaultLayout() {
 	updateLabel.Width = 19
 	updateLabel.Height = 1
 
-	motdLabel := ui.NewPar("")
+	motdLabel := ui.NewParagraph("")
 	motdLabel.X = ui.TermWidth()/2 - 7
 	motdLabel.Border = false
 	motdLabel.Y = 12
 	motdLabel.Height = 1
 	motdLabel.Width = 14
-	if config.offlineMode || !config.getMOTD {
+	if config.OfflineMode || !config.GetMOTD {
 		motdLabel.Text = ""
 	} else {
 		motdLabel.Text = "Fetching MOTD."
 	}
 
-	statusLabel := ui.NewPar("")
+	statusLabel := ui.NewParagraph("")
 	statusLabel.Border = false
 	statusLabel.X = ui.TermWidth() / 2
 	statusLabel.Y = 13
 	statusLabel.Height = 1
 	statusLabel.Width = 70
 
-	onlineLabel := ui.NewPar("")
+	onlineLabel := ui.NewParagraph("")
 	onlineLabel.Border = false
 	onlineLabel.X = ui.TermWidth() / 2
 	onlineLabel.Y = 11
 	onlineLabel.Height = 1
 	onlineLabel.Width = 20
 
-	recordingLabel := ui.NewPar("")
+	recordingLabel := ui.NewParagraph("")
 	recordingLabel.Border = false
 	recordingLabel.X = ui.TermWidth() / 2
 	recordingLabel.Y = 14
 	recordingLabel.Height = 1
 	recordingLabel.Width = 20
 
-	statsLeft := ui.NewPar("")
+	statsLeft := ui.NewParagraph("")
 	statsLeft.SetX(ui.TermWidth()/2 - 34)
 	statsLeft.SetY(15)
 	statsLeft.Border = false
 	statsLeft.Width = 34
 	statsLeft.Height = 5
 
-	statsRight := ui.NewPar("")
+	statsRight := ui.NewParagraph("")
 	statsRight.SetX(ui.TermWidth() / 2)
 	statsRight.SetY(15)
 	statsRight.Border = false
 	statsRight.Width = 34
 	statsRight.Height = 5
 
-	lastGameLabel := ui.NewPar("Last Submission: " + lastGameURL)
+	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)
 	lastGameLabel.Border = false
 	lastGameLabel.X = ui.TermWidth()/2 - 34
 	lastGameLabel.Y = 20
 	lastGameLabel.Height = 1
 	lastGameLabel.Width = 66
 
-	for gameCapture.GetStatus() != statusIsDead {
+	for ready {
 		if gameCapture.GetStatus() != statusIsDead {
 			statDisplay.Update()
 		}
@@ -351,21 +394,21 @@ func defaultLayout() {
 }
 
 func gameLogLayout() {
-	statsLeft := ui.NewPar("")
+	statsLeft := ui.NewParagraph("")
 	statsLeft.SetX(ui.TermWidth()/2 - 34)
 	statsLeft.SetY(2)
 	statsLeft.Border = false
 	statsLeft.Width = 34
 	statsLeft.Height = 5
 
-	statsRight := ui.NewPar("")
+	statsRight := ui.NewParagraph("")
 	statsRight.SetX(ui.TermWidth() / 2)
 	statsRight.SetY(2)
 	statsRight.Border = false
 	statsRight.Width = 34
 	statsRight.Height = 5
 
-	lastGameLabel := ui.NewPar("Last Submission: " + lastGameURL)
+	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)
 	lastGameLabel.Border = false
 	lastGameLabel.X = ui.TermWidth()/2 - 34
 	lastGameLabel.Y = 10

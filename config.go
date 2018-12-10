@@ -1,49 +1,88 @@
 package main
 
-type tomlConfig struct {
-	getMOTD           bool `toml:"get_motd"`
-	checkForUpdates   bool `toml:"check_for_updates"`
-	offlineMode       bool `toml:"offline_mode"`
-	autoClipboardGame bool `toml:"auto_clipboard_game"`
-	stream            streamConfig
-	submit            submitConfig
-	discord           discordConfig
+type TomlConfig struct {
+	SquirrelMode      bool `toml:"squirrel_mode"`
+	GetMOTD           bool `toml:"get_motd"`
+	CheckForUpdates   bool `toml:"check_for_updates"`
+	OfflineMode       bool `toml:"offline_mode"`
+	AutoClipboardGame bool `toml:"auto_clipboard_game"`
+	Stream            StreamConfig
+	Submit            SubmitConfig
+	Discord           DiscordConfig
 }
 
-type streamConfig struct {
-	stats               bool
-	replayStats         bool `toml:"replay_stats"`
-	nonDefaultSpawnsets bool `toml:"non_default_spawnsets"`
+type StreamConfig struct {
+	Stats               bool
+	ReplayStats         bool `toml:"replay_stats"`
+	NonDefaultSpawnsets bool `toml:"non_default_spawnsets"`
 }
 
-type submitConfig struct {
-	stats               bool
-	replayStats         bool `toml:"replay_stats"`
-	nonDefaultSpawnsets bool `toml:"non_default_spawnsets"`
+type SubmitConfig struct {
+	Stats               bool
+	ReplayStats         bool `toml:"replay_stats"`
+	NonDefaultSpawnsets bool `toml:"non_default_spawnsets"`
 }
 
-type discordConfig struct {
-	notifyAbove1000  bool `toml:"notify_above_1000"`
-	notifyPlayerBest bool `toml:"notify_player_best"`
+type DiscordConfig struct {
+	NotifyAbove1000  bool `toml:"notify_above_1000"`
+	NotifyPlayerBest bool `toml:"notify_player_best"`
 }
 
-var config = tomlConfig{
-	getMOTD:           true,
-	checkForUpdates:   true,
-	offlineMode:       false,
-	autoClipboardGame: false,
-	stream: streamConfig{
-		stats:               true,
-		replayStats:         true,
-		nonDefaultSpawnsets: true,
+var config = TomlConfig{
+	SquirrelMode:      false,
+	GetMOTD:           true,
+	CheckForUpdates:   true,
+	OfflineMode:       false,
+	AutoClipboardGame: false,
+	Stream: StreamConfig{
+		Stats:               true,
+		ReplayStats:         true,
+		NonDefaultSpawnsets: true,
 	},
-	submit: submitConfig{
-		stats:               true,
-		replayStats:         true,
-		nonDefaultSpawnsets: true,
+	Submit: SubmitConfig{
+		Stats:               true,
+		ReplayStats:         true,
+		NonDefaultSpawnsets: true,
 	},
-	discord: discordConfig{
-		notifyAbove1000:  true,
-		notifyPlayerBest: true,
+	Discord: DiscordConfig{
+		NotifyAbove1000:  true,
+		NotifyPlayerBest: true,
 	},
 }
+
+const defaultConfigFile = `# DDSTATS CONFIGURATION FILE.
+# If you mess up this file, press F12 while ddstats.exe is running and the default file will be written.
+
+# "get_motd" retrieve the message of the day from ddstats.com.
+# "check_for_updates" check whether there is a new version of ddstats available.
+# "offline_mode" if set to true, all networking features will be disabled; the [stream] and [submit] sections will be disabled automatically.
+# "auto_clipboard_game" if set to true, the clipboard will be automatically populated with the ddstats url of your last game once it has finished submitting to the server.
+get_motd = true
+check_for_updates = true
+offline_mode = false
+auto_clipboard_game = false
+
+# These options are for whether ddstats sends your live game stats to ddstats.com.
+# "stats" are your stats in a normal run.
+# "replay_stats" are stats while you're watching a replay.
+# "non_default_spawnsets" are stats in a run where you are using an alternative survival file.
+[stream]
+stats = true
+replay_stats = true
+non_default_spawnsets = true
+
+# These options are for whether ddstats submits your completed games to ddstats.com.
+# "stats" are your stats in a normal run.
+# "replay_stats" are stats while you're watching a replay.
+# "non_default_spawnsets" are stats in a run where you are using an alternative survival file.
+[submit]
+stats = true
+replay_stats = true
+non_default_spawnsets = true
+
+# By default, if your game goes above 1000 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
+# "notify_above_1000" notifies when your score goes above 1000 seconds.
+# "notify_player_best" notifies when your score goes above your current high score.
+[discord]
+notify_above_1000 = true
+notify_player_best = true`

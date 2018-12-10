@@ -40,7 +40,7 @@ type SioVariables struct {
 }
 
 func (siov *SioVariables) Update() {
-	if !config.offlineMode {
+	if !config.OfflineMode {
 		siov.playerID = gameCapture.playerID
 		siov.timer = gameCapture.timer
 		siov.totalGems = gameCapture.totalGems
@@ -65,8 +65,8 @@ func (siov *SioVariables) Update() {
 			siov.notifyPlayerBest = false
 			siov.notifyAbove1000 = false
 		} else {
-			siov.notifyPlayerBest = config.discord.notifyPlayerBest
-			siov.notifyAbove1000 = config.discord.notifyAbove1000
+			siov.notifyPlayerBest = config.Discord.NotifyPlayerBest
+			siov.notifyAbove1000 = config.Discord.NotifyAbove1000
 		}
 	}
 }
@@ -74,6 +74,10 @@ func (siov *SioVariables) Update() {
 var sioClient *gosocketio.Client
 
 func liveStreamStats() {
+	for !ready {
+		time.Sleep(time.Second)
+	}
+
 	u := url.URL{
 		Scheme: "ws",
 		Host:   "ddstats.com",
@@ -160,7 +164,7 @@ func liveStreamStats() {
 				sioClient.Close()
 				break
 			}
-			if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay {
+			if gameCapture.GetStatus() == statusIsPlaying || gameCapture.GetStatus() == statusIsReplay || gameCapture.GetStatus() == statusIsDead {
 				if err := sioSubmit(*&sioClient); err != nil {
 					sioClient.Close()
 					break
@@ -188,8 +192,8 @@ func sioSubmit(c *gosocketio.Client) error {
 		} else if gameCapture.GetStatus() == statusIsPlaying {
 			sioVariables.deathScreenSent = false
 		}
-		if (config.stream.stats && !sioVariables.isReplay) || (sioVariables.isReplay && config.stream.replayStats) {
-			if !config.stream.nonDefaultSpawnsets && gameCapture.survivalHash != v3survivalHash {
+		if (config.Stream.Stats && !sioVariables.isReplay) || (sioVariables.isReplay && config.Stream.ReplayStats) {
+			if !config.Stream.NonDefaultSpawnsets && gameCapture.survivalHash != v3survivalHash {
 				return nil
 			}
 			if err := c.Emit(

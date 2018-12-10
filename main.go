@@ -1,13 +1,22 @@
-// +build 386
 //go:generate goversioninfo -icon=icon.ico
+// +build 386
+
 package main
 
 import (
+	"github.com/BurntSushi/toml"
 	ui "github.com/gizak/termui"
 )
 
 func main() {
 	setConsoleTitle("ddstats v" + version)
+
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+		configReadError = true
+		ready = false
+	}
+
+	debug.Log(config.Stream.Stats)
 
 	err := ui.Init()
 	if err != nil {
@@ -15,11 +24,9 @@ func main() {
 	}
 	defer ui.Close()
 
-	setupHandles()
-
-	if !config.offlineMode {
+	if !config.OfflineMode {
 		go getMotd()
-		if config.stream.stats || config.stream.replayStats || config.stream.nonDefaultSpawnsets {
+		if config.Stream.Stats || config.Stream.ReplayStats || config.Stream.NonDefaultSpawnsets {
 			go liveStreamStats()
 		}
 	}
@@ -28,5 +35,5 @@ func main() {
 
 	go classicLayout()
 
-	ui.Loop()
+	uiLoop()
 }

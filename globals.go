@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	version        = "0.4.4"
+	version        = "0.4.5"
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 	captureFPS     = 36
 	sioFPS         = 3
@@ -32,9 +32,11 @@ const (
 )
 
 var (
+	ready              = true
 	debug              = debugLog{log: "[ddstats]\n\n"}
 	debugWindowVisible = false
 	motd               string
+	configReadError    = false
 	validVersion       = true
 	updateAvailable    bool
 	survivalHash       string

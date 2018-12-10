@@ -622,6 +622,9 @@ func (gc *GameCapture) GetGameVariables() {
 }
 
 func (gc *GameCapture) Run() {
+	for !ready {
+		time.Sleep(time.Second)
+	}
 	for {
 		if validVersion == false {
 			return

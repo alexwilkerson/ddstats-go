@@ -1,15 +1,13 @@
+# DDSTATS CONFIGURATION FILE.
+# If you mess up this file, press F12 while ddstats.exe is running and the default file will be written.
+
 # "get_motd" retrieve the message of the day from ddstats.com.
 # "check_for_updates" check whether there is a new version of ddstats available.
-# "auto_update" if an update is available, update the exe file automatically. (not yet implemented)
-# "classic_mode" show the classic display for ddstats. (not yet implemented)
 # "offline_mode" if set to true, all networking features will be disabled; the [stream] and [submit] sections will be disabled automatically.
+# "auto_clipboard_game" if set to true, the clipboard will be automatically populated with the ddstats url of your last game once it has finished submitting to the server.
 get_motd = true
 check_for_updates = true
-# auto_update = true
-# classic_mode = true
 offline_mode = false
-
-# "auto_clipboard_game" if set to true, the clipboard will be automatically populated with the ddstats url of your last game once it has finished submitting to the server.
 auto_clipboard_game = false
 
 # These options are for whether ddstats sends your live game stats to ddstats.com.
