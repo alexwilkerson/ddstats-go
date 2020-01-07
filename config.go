@@ -1,11 +1,12 @@
 package main
 
 type TomlConfig struct {
-	SquirrelMode      bool `toml:"squirrel_mode"`
-	GetMOTD           bool `toml:"get_motd"`
-	CheckForUpdates   bool `toml:"check_for_updates"`
-	OfflineMode       bool `toml:"offline_mode"`
-	AutoClipboardGame bool `toml:"auto_clipboard_game"`
+	SquirrelMode      bool   `toml:"squirrel_mode"`
+	GetMOTD           bool   `toml:"get_motd"`
+	CheckForUpdates   bool   `toml:"check_for_updates"`
+	OfflineMode       bool   `toml:"offline_mode"`
+	AutoClipboardGame bool   `toml:"auto_clipboard_game"`
+	Host              string `toml:"host"`
 	Stream            StreamConfig
 	Submit            SubmitConfig
 	Discord           DiscordConfig
@@ -34,6 +35,7 @@ var config = TomlConfig{
 	CheckForUpdates:   true,
 	OfflineMode:       false,
 	AutoClipboardGame: false,
+	Host:              "http://ddstats.com",
 	Stream: StreamConfig{
 		Stats:               true,
 		ReplayStats:         true,
@@ -61,6 +63,7 @@ get_motd = true
 check_for_updates = true
 offline_mode = false
 auto_clipboard_game = false
+host = "http://ddstats.com"
 
 # These options are for whether ddstats sends your live game stats to ddstats.com.
 # "stats" are your stats in a normal run.

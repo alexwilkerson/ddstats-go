@@ -78,12 +78,15 @@ func liveStreamStats() {
 		time.Sleep(time.Second)
 	}
 
-	u := url.URL{
-		Scheme: "ws",
-		Host:   "ddstats.com",
+	configHost, err := url.Parse(config.Host)
+	if err != nil {
+		panic(err)
 	}
 
-	var err error
+	u := url.URL{
+		Scheme: "ws",
+		Host:   configHost.Host,
+	}
 
 	for {
 

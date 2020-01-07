@@ -119,7 +119,7 @@ func copyGameURLToClipboard() {
 
 func unreadableConfigLayout() {
 	for !ready {
-		unreadableConfigFileWindow := ui.NewParagraph("Was not able to read the config file.\nWould you like to rewrite the config file?\n\n[Y]es      [N]o")
+		unreadableConfigFileWindow := ui.NewParagraph("Was not able to read the config file.\nWould you like to reset the config file?\n\n[Y]es      [N]o")
 		unreadableConfigFileWindow.Width = 52
 		unreadableConfigFileWindow.Height = 6
 		unreadableConfigFileWindow.Y = 4

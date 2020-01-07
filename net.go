@@ -13,7 +13,7 @@ func getMotd() {
 
 	jsonData := map[string]string{"version": version}
 	jsonValue, _ := json.Marshal(jsonData)
-	resp, err := http.Post("https://ddstats.com/api/get_motd", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post(config.Host+"/api/get_motd", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		if config.GetMOTD {
 			motd = "Error getting MOTD."
@@ -60,7 +60,7 @@ func submitGame(gr GameRecording) {
 		return
 	}
 
-	resp, err := http.Post("http://ddstats.com/api/submit_game", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post(config.Host+"/api/submit_game", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		lastGameURL = "Error submitting game to server."
 		return

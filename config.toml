@@ -9,6 +9,7 @@ get_motd = true
 check_for_updates = true
 offline_mode = false
 auto_clipboard_game = false
+host = "http://10.0.1.45:5000"
 
 # These options are for whether ddstats sends your live game stats to ddstats.com.
 # "stats" are your stats in a normal run.
