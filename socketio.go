@@ -83,8 +83,12 @@ func liveStreamStats() {
 		panic(err)
 	}
 
+	scheme := "wss"
+	if configHost.Scheme != "https" {
+		scheme = "ws"
+	}
 	u := url.URL{
-		Scheme: "ws",
+		Scheme: scheme,
 		Host:   configHost.Host,
 	}
 
@@ -154,7 +158,7 @@ func liveStreamStats() {
 		debug.Log(gameCapture.playerName)
 		debug.Log(gameCapture.playerID)
 
-		if sioVariables.status == sioStatusConnected {
+		if sioVariables.status == sioStatusConnected && gameCapture.playerID != -1 {
 			sioClient.Emit("login", gameCapture.playerID)
 		} else {
 			continue

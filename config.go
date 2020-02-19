@@ -59,11 +59,12 @@ const defaultConfigFile = `# DDSTATS CONFIGURATION FILE.
 # "check_for_updates" check whether there is a new version of ddstats available.
 # "offline_mode" if set to true, all networking features will be disabled; the [stream] and [submit] sections will be disabled automatically.
 # "auto_clipboard_game" if set to true, the clipboard will be automatically populated with the ddstats url of your last game once it has finished submitting to the server.
+# "host" should never be changed. it's here for testing purposes and also so that if i die in a car accident and someone wants to host their own server, they can do so.
 get_motd = true
 check_for_updates = true
 offline_mode = false
 auto_clipboard_game = false
-host = "http://ddstats.com"
+host = "https://ddstats.com"
 
 # These options are for whether ddstats sends your live game stats to ddstats.com.
 # "stats" are your stats in a normal run.

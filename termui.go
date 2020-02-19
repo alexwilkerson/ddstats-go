@@ -151,7 +151,7 @@ func classicLayout() {
 
 func invalidVersionLayout() {
 	for validVersion == false {
-		invalidVersionWindow := ui.NewParagraph("This version of DDSTATS is invalid. Please visit\nhttps://www.ddstats.com/releases to download the\nnewest version.")
+		invalidVersionWindow := ui.NewParagraph("This version of DDSTATS is invalid. Please visit\nhttps://www.ddstats.com/download to download the\nnewest version.")
 		invalidVersionWindow.Width = 52
 		invalidVersionWindow.Height = 5
 		invalidVersionWindow.Y = 4

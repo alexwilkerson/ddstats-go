@@ -13,7 +13,7 @@ func getMotd() {
 
 	jsonData := map[string]string{"version": version}
 	jsonValue, _ := json.Marshal(jsonData)
-	resp, err := http.Post(config.Host+"/api/get_motd", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post(config.Host+"/api/v2/client_connect", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		if config.GetMOTD {
 			motd = "Error getting MOTD."
@@ -60,7 +60,7 @@ func submitGame(gr GameRecording) {
 		return
 	}
 
-	resp, err := http.Post(config.Host+"/api/submit_game", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post(config.Host+"/api/v2/submit_game", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		lastGameURL = "Error submitting game to server."
 		return
@@ -73,13 +73,13 @@ func submitGame(gr GameRecording) {
 	debug.Log(result)
 
 	if v, ok := result["game_id"]; ok {
-		lastGameURL = fmt.Sprintf("https://ddstats.com/game_log/%v", v)
+		lastGameURL = fmt.Sprintf("https://ddstats.com/games/%v", v)
 		if config.AutoClipboardGame {
 			clipboard.WriteAll(lastGameURL)
 		}
 		if sioVariables.status == sioStatusLoggedIn {
-			if (config.Stream.Stats && gr.ReplayPlayerID == 0) || (config.Stream.ReplayStats && gr.ReplayPlayerID != 0) {
-				if !(!config.Stream.NonDefaultSpawnsets && gr.SurvivalHash != v3survivalHash) {
+			if (config.Submit.Stats && gr.ReplayPlayerID == 0) || (config.Submit.ReplayStats && gr.ReplayPlayerID != 0) {
+				if !(!config.Submit.NonDefaultSpawnsets && gr.SurvivalHash != v3survivalHash) {
 					sioClient.Emit("game_submitted", result["game_id"], config.Discord.NotifyPlayerBest, config.Discord.NotifyAbove1000)
 				}
 			}
