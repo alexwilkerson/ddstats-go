@@ -34,6 +34,8 @@ func getHandle() {
 		survivalFilePath = exeFilePath[0:len(exeFilePath)-4] + "\\survival"
 	}
 	attached = true
+
+	fmt.Printf("%X\n", exeBaseAddress)
 }
 
 func getModuleInfo(pid int) (address, string) {

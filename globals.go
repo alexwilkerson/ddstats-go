@@ -16,7 +16,10 @@ const ddDeathStatus = int32(7)
 
 const (
 	gameStatsAddress address = 0x001F30C0
-	gameAddress      address = 0x001F8084
+	// gameAddress      address = 0x001F8084
+	// gameAddress address = 0x007FF6329F
+	// gameAddress address = 0x7FF6329F0000
+	gameAddress address = 0x00252760
 )
 
 type status int
@@ -75,8 +78,9 @@ var (
 )
 
 var (
-	timer         = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1A0}, variable: float32(0.0)}
-	playerID      = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x5C}, variable: int32(0)}
+	// timer = gameVariable{parentOffset: gameAddress, offsets: []address{}}
+	timer         = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x0, 0x30, 0x8, 0x60, 0x1A8, 0xF1C}, variable: float32(0.0)}
+	playerID      = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x0, 0x30, 0x8, 0x60, 0x1A8, 0xEF8}, variable: int32(0)}
 	totalGems     = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1C0}, variable: int32(0)}
 	daggersFired  = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B4}, variable: int32(0)}
 	daggersHit    = gameVariable{parentOffset: gameStatsAddress, offsets: []address{0x1B8}, variable: int32(0)}

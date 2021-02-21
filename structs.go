@@ -333,10 +333,10 @@ func (gc *GameCapture) GetSurvivalHash() error {
 func (gc *GameCapture) GetPlayerVariables() {
 	if handle != 0 {
 		playerID.Get()
-		playerName.Get()
+		// playerName.Get()
 
 		gc.playerID = playerID.GetVariable().(int32)
-		gc.playerName = playerName.GetVariable().(string)
+		// gc.playerName = playerName.GetVariable().(string)
 	}
 }
 
