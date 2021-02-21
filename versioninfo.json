@@ -2,13 +2,13 @@
     "FixedFileInfo": {
         "FileVersion": {
             "Major": 0,
-            "Minor": 4,
+            "Minor": 6,
             "Patch": 0,
             "Build": 0
         },
         "ProductVersion": {
             "Major": 0,
-            "Minor": 4,
+            "Minor": 6,
             "Patch": 0,
             "Build": 0
         },
@@ -24,12 +24,12 @@
         "FileDescription": "",
         "FileVersion": "",
         "InternalName": "",
-        "LegalCopyright": "Alexander Wilkerson",
+        "LegalCopyright": "Alex Wilkerson",
         "LegalTrademarks": "",
         "OriginalFilename": "ddstats.exe",
         "PrivateBuild": "",
         "ProductName": "ddstats",
-        "ProductVersion": "v0.4.0.0",
+        "ProductVersion": "v0.6.0.0",
         "SpecialBuild": ""
     },
     "VarFileInfo": {
@@ -38,6 +38,6 @@
             "CharsetID": "04B0"
         }
     },
-    "IconPath": "logo_icon.png",
+    "IconPath": "icon.ico",
     "ManifestPath": ""
 }

@@ -1,9 +1,10 @@
-package winapi
+package ddstats
 
 import (
 	"errors"
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/TheTitanrain/w32"
@@ -12,8 +13,10 @@ import (
 const (
 	windowName = "Devil Daggers"
 	// baseOffset should be updated if Devil Daggers is ever updated.
-	baseOffset              = 0x00252760
+	baseOffset = 0x00252760
+	// ddstatsBlockStartOffset should be updated if Devil Daggers is ever updated.
 	ddstatsBlockStartOffset = 0xEF4
+	defaultTickRate         = time.Second / 36
 )
 
 // pointerOffsets should be updated if Devil Daggers is ever updated.
@@ -24,19 +27,58 @@ type (
 	address uintptr
 )
 
-type WinAPI struct {
+// WinAPI is used to connect to and read data from Devil Daggers.
+type DDStats struct {
 	connected           bool
 	handle              handle
 	baseAddress         address
 	ddstatsBlockAddress address
-	devilDaggersData    *DevilDaggersData
+	dataBlock           *devilDaggersData
+	tickRate            time.Duration
+	done                chan struct{}
 }
 
-func New() *WinAPI {
-	return &WinAPI{devilDaggersData: &DevilDaggersData{}}
+// New creates a new DDStats struct to use.
+func New() *DDStats {
+	done := make(chan struct{})
+	return &DDStats{
+		data: &dataBlock{},
+		done: done,
+	}
 }
 
-// Connect makes a connection to the window with the given window name.
+func (wa *WinAPI) WithTickRate(tickRate time.Duration) *WinAPI {
+	wa.tickRate = tickRate
+	return wa
+}
+
+func (wa *WinAPI) StartCapture(connected chan<- bool) {
+	for {
+		select {
+		case <-time.After(wa.tickRate):
+			if !wa.connected {
+				err := wa.Connect()
+				if err != nil {
+					continue
+				}
+			}
+			wa.RefreshDevilDaggersData()
+		case <-wa.done:
+			fmt.Println("finished")
+			break
+		}
+	}
+}
+
+func (wa *WinAPI) StopCapture() {
+	wa.done <- struct{}{}
+}
+
+func (wa *WinAPI) GetConnected() bool {
+	return wa.connected
+}
+
+// Connect attempts to make a connection to the Devil Daggers process.
 func (wa *WinAPI) Connect() error {
 	hwnd := w32.FindWindowW(nil, syscall.StringToUTF16Ptr(windowName))
 	if hwnd == 0 {
@@ -130,4 +172,19 @@ func toAddress(b []uint16) address {
 		ret = (ret << 16) | address(b[i])
 	}
 	return ret
+}
+
+// SetConsoleTitle sets the console title.
+func (wa *WinAPI) SetConsoleTitle(title string) error {
+	handle, err := syscall.LoadLibrary("Kernel32.dll")
+	if err != nil {
+		return err
+	}
+	defer syscall.FreeLibrary(handle)
+	proc, err := syscall.GetProcAddress(handle, "SetConsoleTitleW")
+	if err != nil {
+		return err
+	}
+	_, _, err = syscall.Syscall(proc, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(title))), 0, 0)
+	return err
 }
