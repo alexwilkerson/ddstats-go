@@ -33,7 +33,7 @@ type DDStats struct {
 	handle              handle
 	baseAddress         address
 	ddstatsBlockAddress address
-	dataBlock           *devilDaggersData
+	dataBlock           *dataBlock
 	tickRate            time.Duration
 	done                chan struct{}
 }
@@ -42,47 +42,47 @@ type DDStats struct {
 func New() *DDStats {
 	done := make(chan struct{})
 	return &DDStats{
-		data: &dataBlock{},
-		done: done,
+		dataBlock: &dataBlock{},
+		done:      done,
 	}
 }
 
-func (wa *WinAPI) WithTickRate(tickRate time.Duration) *WinAPI {
-	wa.tickRate = tickRate
-	return wa
+func (dd *DDStats) WithTickRate(tickRate time.Duration) *DDStats {
+	dd.tickRate = tickRate
+	return dd
 }
 
-func (wa *WinAPI) StartCapture(connected chan<- bool) {
+func (dd *DDStats) StartCapture(connected chan<- bool) {
 	for {
 		select {
-		case <-time.After(wa.tickRate):
-			if !wa.connected {
-				err := wa.Connect()
+		case <-time.After(dd.tickRate):
+			if !dd.connected {
+				err := dd.Connect()
 				if err != nil {
 					continue
 				}
 			}
-			wa.RefreshDevilDaggersData()
-		case <-wa.done:
+			dd.RefreshData()
+		case <-dd.done:
 			fmt.Println("finished")
 			break
 		}
 	}
 }
 
-func (wa *WinAPI) StopCapture() {
-	wa.done <- struct{}{}
+func (dd *DDStats) StopCapture() {
+	dd.done <- struct{}{}
 }
 
-func (wa *WinAPI) GetConnected() bool {
-	return wa.connected
+func (dd *DDStats) GetConnected() bool {
+	return dd.connected
 }
 
 // Connect attempts to make a connection to the Devil Daggers process.
-func (wa *WinAPI) Connect() error {
+func (dd *DDStats) Connect() error {
 	hwnd := w32.FindWindowW(nil, syscall.StringToUTF16Ptr(windowName))
 	if hwnd == 0 {
-		wa.connected = false
+		dd.connected = false
 		return fmt.Errorf("Connect: could not find window with name %q", windowName)
 	}
 
@@ -90,27 +90,27 @@ func (wa *WinAPI) Connect() error {
 
 	hndl, err := w32.OpenProcess(w32.PROCESS_ALL_ACCESS, false, uintptr(pid))
 	if err != nil {
-		wa.connected = false
+		dd.connected = false
 		return fmt.Errorf("Connect: could not open process with name %q: %w", windowName, err)
 	}
 
 	baseAddress, err := getBaseAddress(pid)
 	if err != nil {
-		wa.connected = false
+		dd.connected = false
 		return fmt.Errorf("Connect: could get base address: %w", err)
 	}
 
-	wa.connected = true
-	wa.handle = handle(hndl)
-	wa.baseAddress = baseAddress
+	dd.connected = true
+	dd.handle = handle(hndl)
+	dd.baseAddress = baseAddress
 
-	ddstatsBlockAddress, err := wa.getDDStatsBlockBaseAddress()
+	ddstatsBlockAddress, err := dd.getDDStatsBlockBaseAddress()
 	if err != nil {
-		wa.connected = false
+		dd.connected = false
 		return fmt.Errorf("Connect: could get ddstats block address: %w", err)
 	}
 
-	wa.ddstatsBlockAddress = ddstatsBlockAddress
+	dd.ddstatsBlockAddress = ddstatsBlockAddress
 
 	return nil
 }
@@ -135,17 +135,17 @@ func getBaseAddress(pid int) (address, error) {
 	return address(baseAddress), nil
 }
 
-func (wa *WinAPI) getDDStatsBlockBaseAddress() (address, error) {
-	if wa.connected != true {
+func (dd *DDStats) getDDStatsBlockBaseAddress() (address, error) {
+	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
 	}
 
-	pointer, err := wa.getAddressFromPointer(wa.baseAddress + baseOffset)
+	pointer, err := dd.getAddressFromPointer(dd.baseAddress + baseOffset)
 	if err != nil {
 		return 0, errors.New("getDDStatsBlockBaseAddress: could not get base pointer")
 	}
 	for i := range pointerOffsets {
-		pointer, err = wa.getAddressFromPointer(pointer + pointerOffsets[i])
+		pointer, err = dd.getAddressFromPointer(pointer + pointerOffsets[i])
 		if err != nil {
 			return 0, errors.New("getDDStatsBlockBaseAddress: could not get base pointer")
 		}
@@ -154,12 +154,12 @@ func (wa *WinAPI) getDDStatsBlockBaseAddress() (address, error) {
 	return pointer + ddstatsBlockStartOffset, nil
 }
 
-func (wa *WinAPI) getAddressFromPointer(p address) (address, error) {
-	if wa.connected != true {
+func (dd *DDStats) getAddressFromPointer(p address) (address, error) {
+	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
 	}
 
-	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(wa.handle), uintptr(p), 8)
+	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(p), 8)
 	if !ok {
 		return 0, errors.New("GetAddressFromPointer: unable to read process memory")
 	}
@@ -175,7 +175,7 @@ func toAddress(b []uint16) address {
 }
 
 // SetConsoleTitle sets the console title.
-func (wa *WinAPI) SetConsoleTitle(title string) error {
+func (dd *DDStats) SetConsoleTitle(title string) error {
 	handle, err := syscall.LoadLibrary("Kernel32.dll")
 	if err != nil {
 		return err

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alexwilkerson/ddstats-go/internal/winapi"
+	"github.com/alexwilkerson/ddstats-go/pkg/ddstats"
 )
 
 const (
@@ -12,15 +12,15 @@ const (
 )
 
 func main() {
-	winAPI := winapi.New()
+	dd := ddstats.New()
 
-	err := winAPI.SetConsoleTitle(consoleTitle)
+	err := dd.SetConsoleTitle(consoleTitle)
 	if err != nil {
 		fmt.Printf("main: could not set console title: %v\n", err)
 		os.Exit(1)
 	}
 
-	err = winAPI.Connect()
+	err = dd.Connect()
 	if err != nil {
 		fmt.Println("connection unsuccessful")
 		fmt.Println(err)
@@ -29,7 +29,7 @@ func main() {
 
 	fmt.Println("connection successful")
 
-	err = winAPI.RefreshDevilDaggersData()
+	err = dd.RefreshData()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

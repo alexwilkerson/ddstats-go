@@ -62,7 +62,7 @@ type dataBlock struct {
 	Status             uint32
 }
 
-func (dd *DDStats) RefreshDevilDaggersData() error {
+func (dd *DDStats) RefreshData() error {
 	if dd.connected != true {
 		return errors.New("RefreshDevilDaggersDataBlock: connection to window lost")
 	}
