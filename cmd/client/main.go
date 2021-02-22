@@ -7,14 +7,31 @@ import (
 
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
+	"github.com/alexwilkerson/ddstats-go/pkg/net"
 	"github.com/alexwilkerson/ddstats-go/pkg/socketio"
 )
 
 const (
-	consoleTitle = "ddstats v0.6.0"
+	// version must be in "X.X.X" order.
+	version      = "0.6.0"
+	consoleTitle = "ddstats v" + version
 )
 
 func main() {
+	netClient, err := net.New("https://ddstats.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := netClient.InitConnection(version)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%v", result)
+}
+
+func main4() {
 	config, err := config.New()
 	if err != nil {
 		log.Fatal(err)
