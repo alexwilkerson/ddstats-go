@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/alexwilkerson/ddstats-go/pkg/api"
+	"github.com/alexwilkerson/ddstats-go/pkg/client"
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
 	"github.com/alexwilkerson/ddstats-go/pkg/socketio"
@@ -19,6 +20,54 @@ const (
 )
 
 func main() {
+	client, err := client.New()
+	if err != nil {
+		if err := logError(err); err != nil {
+			log.Fatal(err)
+		}
+		log.Fatal(err)
+	}
+	err = client.Run()
+	if err != nil {
+		if err := logError(err); err != nil {
+			log.Fatal(err)
+		}
+		log.Fatal(err)
+	}
+}
+
+func logError(inputErr error) error {
+	f, err := os.OpenFile("error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return fmt.Errorf("logError: error opening file: %w", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+	log.Printf("%v\n", inputErr)
+	return nil
+}
+
+// func main6() {
+// 	ui, err := consoleui.New()
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	defer ui.Close()
+
+// 	data := consoleui.Data{
+// 		PlayerName:      "VHS",
+// 		Version:         version,
+// 		UpdateAvailable: true,
+// 		MOTD:            "hello there",
+// 	}
+
+// 	ui.DrawScreen(&data)
+
+// 	fmt.Scanln()
+// }
+
+func main5() {
 	apiClient, err := api.New("https://ddstats.com")
 	if err != nil {
 		log.Fatal(err)

@@ -17,6 +17,10 @@ const (
 	ddstatsBlockStartOffset = 0xEF4
 )
 
+var deathTypes = []string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "Opened", "Purged",
+	"Desecrated", "Sacrificed", "Eviscerated", "Annihilated", "Intoxicated",
+	"Envenmonated", "Incarnated", "Discarnated", "Barbed"}
+
 // pointerOffsets should be updated if Devil Daggers is ever updated.
 var pointerOffsets = []address{0x0, 0x30, 0x8, 0x60, 0x1A8}
 
@@ -100,6 +104,11 @@ func (dd *DevilDaggers) Connect() (bool, error) {
 	return true, nil
 }
 
+// Close closes the handle to Devil Daggers.
+func (dd *DevilDaggers) Close() {
+	w32.CloseHandle(w32.HANDLE(dd.handle))
+}
+
 // GetConnected returns whether the DevilDaggers struct is currently connected to Devil Daggers.
 func (dd *DevilDaggers) GetConnected() bool {
 	return dd.connected
@@ -162,4 +171,12 @@ func toAddress(b []uint16) address {
 		ret = (ret << 16) | address(b[i])
 	}
 	return ret
+}
+
+func GetDeathTypeString(deathType int) (string, error) {
+	if deathType < 0 || deathType > len(deathTypes) {
+		return "", errors.New("GetDeathTypeString: no death type related to this int")
+	}
+
+	return deathTypes[deathType], nil
 }
