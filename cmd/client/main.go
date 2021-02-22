@@ -5,30 +5,49 @@ import (
 	"log"
 	"os"
 
+	"github.com/alexwilkerson/ddstats-go/pkg/api"
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
-	"github.com/alexwilkerson/ddstats-go/pkg/net"
 	"github.com/alexwilkerson/ddstats-go/pkg/socketio"
 )
 
 const (
 	// version must be in "X.X.X" order.
-	version      = "0.6.0"
-	consoleTitle = "ddstats v" + version
+	version        = "0.6.0"
+	consoleTitle   = "ddstats v" + version
+	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 )
 
 func main() {
-	netClient, err := net.New("https://ddstats.com")
+	apiClient, err := api.New("https://ddstats.com")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	result, err := netClient.InitConnection(version)
+	result, err := apiClient.InitConnection(version)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%v", result)
+	fmt.Printf("%v\n", result)
+
+	gameID, err := apiClient.SubmitGame(
+		&api.SubmitGameInput{
+			PlayerID:     151675,
+			PlayerName:   "VHS",
+			Granularity:  1,
+			Timer:        0.01,
+			TimerSlice:   []float32{0, 0.05, 0.01},
+			TotalGems:    0,
+			Version:      version,
+			SurvivalHash: v3survivalHash,
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(gameID)
 }
 
 func main4() {

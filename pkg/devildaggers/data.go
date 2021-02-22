@@ -110,195 +110,195 @@ func (dd *DevilDaggers) RefreshData() error {
 	return nil
 }
 
-func (dd *DevilDaggers) GetDDStatsVersion() int {
-	return int(dd.dataBlock.DDStatsVersion)
+func (dd *DevilDaggers) GetDDStatsVersion() uint32 {
+	return dd.dataBlock.DDStatsVersion
 }
 
-func (dd *DevilDaggers) GetPlayerID() int {
-	return int(dd.dataBlock.PlayerID)
+func (dd *DevilDaggers) GetPlayerID() uint32 {
+	return dd.dataBlock.PlayerID
 }
 
 func (dd *DevilDaggers) GetPlayerName() string {
 	return byteArrayToString(&dd.dataBlock.UserName)
 }
 
-func (dd *DevilDaggers) GetTime() float64 {
-	return float64(dd.dataBlock.Time)
+func (dd *DevilDaggers) GetTime() float32 {
+	return dd.dataBlock.Time
 }
 
-func (dd *DevilDaggers) GetGemsCollected() int {
-	return int(dd.dataBlock.GemsCollected)
+func (dd *DevilDaggers) GetGemsCollected() uint32 {
+	return dd.dataBlock.GemsCollected
 }
 
-func (dd *DevilDaggers) GetKills() int {
-	return int(dd.dataBlock.Kills)
+func (dd *DevilDaggers) GetKills() uint32 {
+	return dd.dataBlock.Kills
 }
 
-func (dd *DevilDaggers) GetDaggersFired() int {
-	return int(dd.dataBlock.DaggersFired)
+func (dd *DevilDaggers) GetDaggersFired() uint32 {
+	return dd.dataBlock.DaggersFired
 }
 
-func (dd *DevilDaggers) GetDaggersHit() int {
-	return int(dd.dataBlock.DaggersHit)
+func (dd *DevilDaggers) GetDaggersHit() uint32 {
+	return dd.dataBlock.DaggersHit
 }
 
-func (dd *DevilDaggers) GetAccuracy() float64 {
+func (dd *DevilDaggers) GetAccuracy() float32 {
 	if dd.dataBlock.DaggersFired == 0 {
 		return 0.0
 	}
-	return float64(dd.dataBlock.DaggersHit / dd.dataBlock.DaggersFired)
+	return float32(dd.dataBlock.DaggersHit) / float32(dd.dataBlock.DaggersFired)
 }
 
-func (dd *DevilDaggers) GetEnemiesAlive() int {
-	return int(dd.dataBlock.EnemiesAlive)
+func (dd *DevilDaggers) GetEnemiesAlive() uint32 {
+	return dd.dataBlock.EnemiesAlive
 }
 
-func (dd *DevilDaggers) GetLevelGems() int {
-	return int(dd.dataBlock.LevelGems)
+func (dd *DevilDaggers) GetLevelGems() uint32 {
+	return dd.dataBlock.LevelGems
 }
 
-func (dd *DevilDaggers) GetHomingDaggers() int {
-	return int(dd.dataBlock.HomingDaggers)
+func (dd *DevilDaggers) GetHomingDaggers() uint32 {
+	return dd.dataBlock.HomingDaggers
 }
 
-func (dd *DevilDaggers) GetGemsDespawned() int {
-	return int(dd.dataBlock.GemsDespawned)
+func (dd *DevilDaggers) GetGemsDespawned() uint32 {
+	return dd.dataBlock.GemsDespawned
 }
 
-func (dd *DevilDaggers) GetGemsEaten() int {
-	return int(dd.dataBlock.GemsEaten)
+func (dd *DevilDaggers) GetGemsEaten() uint32 {
+	return dd.dataBlock.GemsEaten
 }
 
-func (dd *DevilDaggers) GetTotalGems() int {
-	return int(dd.dataBlock.TotalGems)
+func (dd *DevilDaggers) GetTotalGems() uint32 {
+	return dd.dataBlock.TotalGems
 }
 
-func (dd *DevilDaggers) GetSkull1Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[skull1])
+func (dd *DevilDaggers) GetSkull1Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[skull1]
 }
 
-func (dd *DevilDaggers) GetSkull2Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[skull2])
+func (dd *DevilDaggers) GetSkull2Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[skull2]
 }
 
-func (dd *DevilDaggers) GetSpiderlingAlive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[spiderling])
+func (dd *DevilDaggers) GetSpiderlingAlive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[spiderling]
 }
 
-func (dd *DevilDaggers) GetSkull3Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[skull3])
+func (dd *DevilDaggers) GetSkull3Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[skull3]
 }
 
-func (dd *DevilDaggers) GetSquid1Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[squid1])
+func (dd *DevilDaggers) GetSquid1Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[squid1]
 }
 
-func (dd *DevilDaggers) GetSquid2Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[squid2])
+func (dd *DevilDaggers) GetSquid2Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[squid2]
 }
 
-func (dd *DevilDaggers) GetSquid3Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[squid3])
+func (dd *DevilDaggers) GetSquid3Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[squid3]
 }
 
-func (dd *DevilDaggers) GetCentipede1Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[centipede1])
+func (dd *DevilDaggers) GetCentipede1Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[centipede1]
 }
 
-func (dd *DevilDaggers) GetCentipede2Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[centipede2])
+func (dd *DevilDaggers) GetCentipede2Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[centipede2]
 }
 
-func (dd *DevilDaggers) GetSpider1Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[spider1])
+func (dd *DevilDaggers) GetSpider1Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[spider1]
 }
 
-func (dd *DevilDaggers) GetSpider2Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[spider2])
+func (dd *DevilDaggers) GetSpider2Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[spider2]
 }
 
-func (dd *DevilDaggers) GetLeviathanAlive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[leviathan])
+func (dd *DevilDaggers) GetLeviathanAlive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[leviathan]
 }
 
-func (dd *DevilDaggers) GetOrbAlive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[orb])
+func (dd *DevilDaggers) GetOrbAlive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[orb]
 }
 
-func (dd *DevilDaggers) GetThornAlive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[thorn])
+func (dd *DevilDaggers) GetThornAlive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[thorn]
 }
 
-func (dd *DevilDaggers) GetCentipede3Alive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[centipede3])
+func (dd *DevilDaggers) GetCentipede3Alive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[centipede3]
 }
 
-func (dd *DevilDaggers) GetSpiderEggAlive() int {
-	return int(dd.dataBlock.PerEnemyAliveCount[spiderEgg])
+func (dd *DevilDaggers) GetSpiderEggAlive() uint16 {
+	return dd.dataBlock.PerEnemyAliveCount[spiderEgg]
 }
 
-func (dd *DevilDaggers) GetSkull1Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[skull1])
+func (dd *DevilDaggers) GetSkull1Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[skull1]
 }
 
-func (dd *DevilDaggers) GetSkull2Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[skull2])
+func (dd *DevilDaggers) GetSkull2Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[skull2]
 }
 
-func (dd *DevilDaggers) GetSpiderlingKilled() int {
-	return int(dd.dataBlock.PerEnemyKillCount[spiderling])
+func (dd *DevilDaggers) GetSpiderlingKilled() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[spiderling]
 }
 
-func (dd *DevilDaggers) GetSkull3Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[skull3])
+func (dd *DevilDaggers) GetSkull3Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[skull3]
 }
 
-func (dd *DevilDaggers) GetSquid1Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[squid1])
+func (dd *DevilDaggers) GetSquid1Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[squid1]
 }
 
-func (dd *DevilDaggers) GetSquid2Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[squid2])
+func (dd *DevilDaggers) GetSquid2Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[squid2]
 }
 
-func (dd *DevilDaggers) GetSquid3Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[squid3])
+func (dd *DevilDaggers) GetSquid3Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[squid3]
 }
 
-func (dd *DevilDaggers) GetCentipede1Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[centipede1])
+func (dd *DevilDaggers) GetCentipede1Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[centipede1]
 }
 
-func (dd *DevilDaggers) GetCentipede2Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[centipede2])
+func (dd *DevilDaggers) GetCentipede2Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[centipede2]
 }
 
-func (dd *DevilDaggers) GetSpider1Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[spider1])
+func (dd *DevilDaggers) GetSpider1Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[spider1]
 }
 
-func (dd *DevilDaggers) GetSpider2Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[spider2])
+func (dd *DevilDaggers) GetSpider2Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[spider2]
 }
 
-func (dd *DevilDaggers) GetLeviathanKilled() int {
-	return int(dd.dataBlock.PerEnemyKillCount[leviathan])
+func (dd *DevilDaggers) GetLeviathanKilled() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[leviathan]
 }
 
-func (dd *DevilDaggers) GetOrbKilled() int {
-	return int(dd.dataBlock.PerEnemyKillCount[orb])
+func (dd *DevilDaggers) GetOrbKilled() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[orb]
 }
 
-func (dd *DevilDaggers) GetThornKilled() int {
-	return int(dd.dataBlock.PerEnemyKillCount[thorn])
+func (dd *DevilDaggers) GetThornKilled() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[thorn]
 }
 
-func (dd *DevilDaggers) GetCentipede3Killed() int {
-	return int(dd.dataBlock.PerEnemyKillCount[centipede3])
+func (dd *DevilDaggers) GetCentipede3Killed() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[centipede3]
 }
 
-func (dd *DevilDaggers) GetSpiderEggKilled() int {
-	return int(dd.dataBlock.PerEnemyKillCount[spiderEgg])
+func (dd *DevilDaggers) GetSpiderEggKilled() uint16 {
+	return dd.dataBlock.PerEnemyKillCount[spiderEgg]
 }
 
 func (dd *DevilDaggers) GetIsPlayerAlive() bool {
@@ -309,16 +309,16 @@ func (dd *DevilDaggers) GetIsReplay() bool {
 	return dd.dataBlock.IsReplay
 }
 
-func (dd *DevilDaggers) GetDeathType() int {
-	return int(dd.dataBlock.DeathType)
+func (dd *DevilDaggers) GetDeathType() uint8 {
+	return dd.dataBlock.DeathType
 }
 
 func (dd *DevilDaggers) GetIsInGame() bool {
 	return dd.dataBlock.IsInGame
 }
 
-func (dd *DevilDaggers) GetReplayPlayerID() int {
-	return int(dd.dataBlock.ReplayPlayerID)
+func (dd *DevilDaggers) GetReplayPlayerID() uint32 {
+	return dd.dataBlock.ReplayPlayerID
 }
 
 func (dd *DevilDaggers) GetReplayPlayerName() string {
@@ -329,28 +329,28 @@ func (dd *DevilDaggers) GetLevelHashMD5() string {
 	return fmt.Sprintf("%x", dd.dataBlock.LevelHashMD5)
 }
 
-func (dd *DevilDaggers) GetTimeLvl2() float64 {
-	return float64(dd.dataBlock.TimeLvl2)
+func (dd *DevilDaggers) GetTimeLvl2() float32 {
+	return dd.dataBlock.TimeLvl2
 }
 
-func (dd *DevilDaggers) GetTimeLvl3() float64 {
-	return float64(dd.dataBlock.TimeLvl3)
+func (dd *DevilDaggers) GetTimeLvl3() float32 {
+	return dd.dataBlock.TimeLvl3
 }
 
-func (dd *DevilDaggers) GetTimeLvl4() float64 {
-	return float64(dd.dataBlock.TimeLvl4)
+func (dd *DevilDaggers) GetTimeLvl4() float32 {
+	return dd.dataBlock.TimeLvl4
 }
 
-func (dd *DevilDaggers) GetLeviathanDownTime() float64 {
-	return float64(dd.dataBlock.LeviDownTime)
+func (dd *DevilDaggers) GetLeviathanDownTime() float32 {
+	return dd.dataBlock.LeviDownTime
 }
 
-func (dd *DevilDaggers) GetOrbDownTime() float64 {
-	return float64(dd.dataBlock.OrbDownTime)
+func (dd *DevilDaggers) GetOrbDownTime() float32 {
+	return dd.dataBlock.OrbDownTime
 }
 
-func (dd *DevilDaggers) GetStatus() int {
-	return int(dd.dataBlock.Status)
+func (dd *DevilDaggers) GetStatus() uint32 {
+	return dd.dataBlock.Status
 }
 
 func byteArrayToString(a *[32]byte) string {

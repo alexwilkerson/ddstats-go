@@ -70,32 +70,32 @@ func (c *Client) InitConnection(version string) (*GetConnectionResult, error) {
 }
 
 type SubmitGameInput struct {
-	PlayerID            int32     `json:"playerID"`
+	PlayerID            uint32    `json:"playerID"`
 	PlayerName          string    `json:"playerName"`
-	Granularity         int32     `json:"granularity"`
+	Granularity         uint32    `json:"granularity"`
 	Timer               float32   `json:"inGameTimer"`
 	TimerSlice          []float32 `json:"inGameTimerVector"`
-	TotalGems           int32     `json:"gems"`
+	TotalGems           uint32    `json:"gems"`
 	TotalGemsSlice      []int32   `json:"gemsVector"`
 	Level2time          float32   `json:"levelTwoTime"`
 	Level3time          float32   `json:"levelThreeTime"`
 	Level4time          float32   `json:"levelFourTime"`
-	Homing              int32     `json:"homingDaggers"`
-	HomingSlice         []int32   `json:"homingDaggersVector"`
-	HomingMax           int32     `json:"homingDaggersMax"`
+	Homing              uint32    `json:"homingDaggers"`
+	HomingSlice         []uint32  `json:"homingDaggersVector"`
+	HomingMax           uint32    `json:"homingDaggersMax"`
 	HomingMaxTime       float32   `json:"homingDaggersMaxTime"`
-	DaggersFired        int32     `json:"daggersFired"`
-	DaggersFiredSlice   []int32   `json:"daggersFiredVector"`
-	DaggersHit          int32     `json:"daggersHit"`
-	DaggersHitSlice     []int32   `json:"daggersHitVector"`
-	EnemiesAlive        int32     `json:"enemiesAlive"`
-	EnemiesAliveSlice   []int32   `json:"enemiesAliveVector"`
-	EnemiesAliveMax     int32     `json:"enemiesAliveMax"`
+	DaggersFired        uint32    `json:"daggersFired"`
+	DaggersFiredSlice   []uint32  `json:"daggersFiredVector"`
+	DaggersHit          uint32    `json:"daggersHit"`
+	DaggersHitSlice     []uint32  `json:"daggersHitVector"`
+	EnemiesAlive        uint32    `json:"enemiesAlive"`
+	EnemiesAliveSlice   []uint32  `json:"enemiesAliveVector"`
+	EnemiesAliveMax     uint32    `json:"enemiesAliveMax"`
 	EnemiesAliveMaxTime float32   `json:"enemiesAliveMaxTime"`
-	EnemiesKilled       int32     `json:"enemiesKilled"`
-	EnemiesKilledSlice  []int32   `json:"enemiesKilledVector"`
-	DeathType           int32     `json:"deathType"`
-	ReplayPlayerID      int32     `json:"replayPlayerID"`
+	EnemiesKilled       uint32    `json:"enemiesKilled"`
+	EnemiesKilledSlice  []uint32  `json:"enemiesKilledVector"`
+	DeathType           uint32    `json:"deathType"`
+	ReplayPlayerID      uint32    `json:"replayPlayerID"`
 	Version             string    `json:"version"`
 	SurvivalHash        string    `json:"survivalHash"`
 }
