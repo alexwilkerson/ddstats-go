@@ -1,10 +1,9 @@
-package ddstats
+package devildaggers
 
 import (
 	"errors"
 	"fmt"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/TheTitanrain/w32"
@@ -16,7 +15,6 @@ const (
 	baseOffset = 0x00252760
 	// ddstatsBlockStartOffset should be updated if Devil Daggers is ever updated.
 	ddstatsBlockStartOffset = 0xEF4
-	defaultTickRate         = time.Second / 36
 )
 
 // pointerOffsets should be updated if Devil Daggers is ever updated.
@@ -27,63 +25,50 @@ type (
 	address uintptr
 )
 
-// WinAPI is used to connect to and read data from Devil Daggers.
-type DDStats struct {
+// DevilDaggers is used to connect to and read data from Devil Daggers.
+type DevilDaggers struct {
 	connected           bool
 	handle              handle
 	baseAddress         address
 	ddstatsBlockAddress address
 	dataBlock           *dataBlock
-	tickRate            time.Duration
-	done                chan struct{}
 }
 
 // New creates a new DDStats struct to use.
-func New() *DDStats {
-	done := make(chan struct{})
-	return &DDStats{
+func New() *DevilDaggers {
+	return &DevilDaggers{
 		dataBlock: &dataBlock{},
-		done:      done,
 	}
 }
 
-func (dd *DDStats) WithTickRate(tickRate time.Duration) *DDStats {
-	dd.tickRate = tickRate
-	return dd
-}
+// func (dd *DevilDaggers) StartCapture(connected chan<- bool) {
+// 	for {
+// 		select {
+// 		case <-time.After(dd.tickRate):
+// 			if !dd.connected {
+// 				err := dd.Connect()
+// 				if err != nil {
+// 					continue
+// 				}
+// 			}
+// 			dd.RefreshData()
+// 		case <-dd.done:
+// 			fmt.Println("finished")
+// 			break
+// 		}
+// 	}
+// }
 
-func (dd *DDStats) StartCapture(connected chan<- bool) {
-	for {
-		select {
-		case <-time.After(dd.tickRate):
-			if !dd.connected {
-				err := dd.Connect()
-				if err != nil {
-					continue
-				}
-			}
-			dd.RefreshData()
-		case <-dd.done:
-			fmt.Println("finished")
-			break
-		}
-	}
-}
-
-func (dd *DDStats) StopCapture() {
-	dd.done <- struct{}{}
-}
-
-func (dd *DDStats) GetConnected() bool {
-	return dd.connected
-}
+// func (dd *DevilDaggers) StopCapture() {
+// 	dd.done <- struct{}{}
+// }
 
 // Connect attempts to make a connection to the Devil Daggers process.
-func (dd *DDStats) Connect() error {
+func (dd *DevilDaggers) Connect() (bool, error) {
 	hwnd := w32.FindWindowW(nil, syscall.StringToUTF16Ptr(windowName))
 	if hwnd == 0 {
 		dd.connected = false
-		return fmt.Errorf("Connect: could not find window with name %q", windowName)
+		return false, fmt.Errorf("Connect: could not find window with name %q", windowName)
 	}
 
 	_, pid := w32.GetWindowThreadProcessId(hwnd)
@@ -91,28 +76,33 @@ func (dd *DDStats) Connect() error {
 	hndl, err := w32.OpenProcess(w32.PROCESS_ALL_ACCESS, false, uintptr(pid))
 	if err != nil {
 		dd.connected = false
-		return fmt.Errorf("Connect: could not open process with name %q: %w", windowName, err)
+		return false, fmt.Errorf("Connect: could not open process with name %q: %w", windowName, err)
 	}
 
 	baseAddress, err := getBaseAddress(pid)
 	if err != nil {
 		dd.connected = false
-		return fmt.Errorf("Connect: could get base address: %w", err)
+		return false, fmt.Errorf("Connect: could get base address: %w", err)
 	}
 
 	dd.connected = true
 	dd.handle = handle(hndl)
 	dd.baseAddress = baseAddress
 
-	ddstatsBlockAddress, err := dd.getDDStatsBlockBaseAddress()
+	ddstatsBlockAddress, err := dd.getDevilDaggersBlockBaseAddress()
 	if err != nil {
 		dd.connected = false
-		return fmt.Errorf("Connect: could get ddstats block address: %w", err)
+		return false, fmt.Errorf("Connect: could get ddstats block address: %w", err)
 	}
 
 	dd.ddstatsBlockAddress = ddstatsBlockAddress
 
-	return nil
+	return true, nil
+}
+
+// GetConnected returns whether the DevilDaggers struct is currently connected to Devil Daggers.
+func (dd *DevilDaggers) GetConnected() bool {
+	return dd.connected
 }
 
 func getBaseAddress(pid int) (address, error) {
@@ -135,26 +125,26 @@ func getBaseAddress(pid int) (address, error) {
 	return address(baseAddress), nil
 }
 
-func (dd *DDStats) getDDStatsBlockBaseAddress() (address, error) {
+func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
 	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
 	}
 
 	pointer, err := dd.getAddressFromPointer(dd.baseAddress + baseOffset)
 	if err != nil {
-		return 0, errors.New("getDDStatsBlockBaseAddress: could not get base pointer")
+		return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
 	}
 	for i := range pointerOffsets {
 		pointer, err = dd.getAddressFromPointer(pointer + pointerOffsets[i])
 		if err != nil {
-			return 0, errors.New("getDDStatsBlockBaseAddress: could not get base pointer")
+			return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
 		}
 	}
 
 	return pointer + ddstatsBlockStartOffset, nil
 }
 
-func (dd *DDStats) getAddressFromPointer(p address) (address, error) {
+func (dd *DevilDaggers) getAddressFromPointer(p address) (address, error) {
 	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
 	}
@@ -172,19 +162,4 @@ func toAddress(b []uint16) address {
 		ret = (ret << 16) | address(b[i])
 	}
 	return ret
-}
-
-// SetConsoleTitle sets the console title.
-func (dd *DDStats) SetConsoleTitle(title string) error {
-	handle, err := syscall.LoadLibrary("Kernel32.dll")
-	if err != nil {
-		return err
-	}
-	defer syscall.FreeLibrary(handle)
-	proc, err := syscall.GetProcAddress(handle, "SetConsoleTitleW")
-	if err != nil {
-		return err
-	}
-	_, _, err = syscall.Syscall(proc, 1, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(title))), 0, 0)
-	return err
 }
