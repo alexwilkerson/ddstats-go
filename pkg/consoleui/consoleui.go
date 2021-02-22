@@ -9,13 +9,15 @@ import (
 )
 
 const (
-	StatusDevilDaggersNotFound = iota
-	StatusInMainMenu
-	StatusInDaggerLobby
-	StatusWatchingReplay
-	StatusIsPlaying
+	StatusTitleScreen = iota
+	StatusMenu
+	StatusLobby
+	StatusPlaying
+	StatusDead
+	StatusOwnReplay
+	StatusOtherReplay
 	StatusConnecting
-	StatusIsDead
+	StatusDevilDaggersNotFound
 )
 
 const (
@@ -42,18 +44,18 @@ type Data struct {
 	Version         string
 	UpdateAvailable bool
 	MOTD            string
-	Status          int
-	OnlineStatus    int
+	Status          uint32
+	OnlineStatus    uint
 	Recording       bool
 	Timer           float32
-	DaggersHit      int32
-	DaggersFired    int32
+	DaggersHit      uint32
+	DaggersFired    uint32
 	Accuracy        float32
-	TotalGems       int32
-	Homing          int32
-	EnemiesAlive    int32
-	EnemiesKilled   int32
-	DeathType       int32
+	TotalGems       uint32
+	Homing          uint32
+	EnemiesAlive    uint32
+	EnemiesKilled   uint32
+	DeathType       uint8
 }
 
 type ConsoleUI struct {
@@ -103,9 +105,9 @@ func (cui *ConsoleUI) PollEvents() {
 	for {
 		e := <-uiEvents
 		switch e.ID {
-		case "q", "<C-c>", "<f10>":
+		case "q", "<C-c>", "<f9>":
 			return
-		case "<f12>":
+		case "<f11>":
 			config.WriteDefaultConfigFile()
 		case "<MouseLeft>":
 			copyGameURLToClipboard()
@@ -114,7 +116,7 @@ func (cui *ConsoleUI) PollEvents() {
 }
 
 func copyGameURLToClipboard() {
-	// if lastGameURL[:5] == "https" {
+	// if lastGameURL[:4] == "https" {
 	// 	lastGameURLCopyTime = time.Now()
 	// 	clipboard.WriteAll(lastGameURL)
 	// }
@@ -138,7 +140,7 @@ func (cui *ConsoleUI) drawName() {
 	nameLabel.Border = false
 	nameLabel.X = ui.TermWidth()/2 - 34
 	nameLabel.Y = 11
-	nameLabel.Width = 34
+	nameLabel.Width = len(cui.data.PlayerName)
 	nameLabel.Height = 1
 
 	ui.Render(nameLabel)
@@ -197,22 +199,28 @@ func (cui *ConsoleUI) drawStatus() error {
 	case StatusDevilDaggersNotFound:
 		statusString = "Devil Daggers not found"
 		statusLabel.TextFgColor = ui.StringToAttribute("red")
-	case StatusInMainMenu:
+	case StatusTitleScreen:
+		statusString = "In title screen"
+		statusLabel.TextFgColor = ui.StringToAttribute("green")
+	case StatusMenu:
 		statusString = "In main menu"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
-	case StatusInDaggerLobby:
+	case StatusLobby:
 		statusString = "In dagger lobby"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
-	case StatusWatchingReplay:
-		statusString = "Watching replay"
+	case StatusOwnReplay:
+		statusString = "Watching self replay"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
-	case StatusIsPlaying:
+	case StatusOtherReplay:
+		statusString = "Watching someone's replay"
+		statusLabel.TextFgColor = ui.StringToAttribute("green")
+	case StatusPlaying:
 		statusString = "Currently playing"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
 	case StatusConnecting:
 		statusString = "Connecting to Devil Daggers"
 		statusLabel.TextFgColor = ui.StringToAttribute("yellow")
-	case StatusIsDead:
+	case StatusDead:
 		deathType, err := devildaggers.GetDeathTypeString(int(cui.data.DeathType))
 		if err != nil {
 			return fmt.Errorf("drawStatus: could not get death type string: %w", err)
@@ -233,26 +241,29 @@ func (cui *ConsoleUI) drawStatus() error {
 }
 
 func (cui *ConsoleUI) drawOnlineStatus() {
-	onlineLabel := ui.NewParagraph("")
+	var onlineLabelText string
+	var color ui.Attribute
 	switch cui.data.OnlineStatus {
 	case OnlineStatusDisconnected:
-		onlineLabel.TextFgColor = ui.StringToAttribute("red")
-		onlineLabel.Text = "[[ Disconnected ]]"
+		color = ui.ColorRed
+		onlineLabelText = "[[ Disconnected ]]"
 	case OnlineStatusConnecting:
-		onlineLabel.TextFgColor = ui.StringToAttribute("yellow")
-		onlineLabel.Text = "[[ Connecting... ]]"
+		color = ui.ColorYellow
+		onlineLabelText = "[[ Connecting... ]]"
 	case OnlineStatusTimedOut:
-		onlineLabel.TextFgColor = ui.StringToAttribute("red")
-		onlineLabel.Text = "  [[ Timed out ]]  "
+		color = ui.ColorRed
+		onlineLabelText = "  [[ Timed out ]]  "
 	case OnlineStatusLoggedIn:
-		onlineLabel.TextFgColor = ui.StringToAttribute("green")
-		onlineLabel.Text = "  [[ Logged in ]]  "
+		color = ui.ColorGreen
+		onlineLabelText = "  [[ Logged in ]]  "
 	case OnlineStatusConnected:
-		onlineLabel.TextFgColor = ui.StringToAttribute("green")
-		onlineLabel.Text = "  [[ Connected ]]  "
+		color = ui.ColorGreen
+		onlineLabelText = "  [[ Connected ]]  "
 	}
+	onlineLabel := ui.NewParagraph(onlineLabelText)
+	onlineLabel.TextFgColor = color
 	onlineLabel.Border = false
-	onlineLabel.X = ui.TermWidth()/2 - len(onlineLabel.Text)/2
+	onlineLabel.X = ui.TermWidth()/2 - len(onlineLabelText)/2
 	onlineLabel.Y = 11
 	onlineLabel.Height = 1
 	onlineLabel.Width = 20

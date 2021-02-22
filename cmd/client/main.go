@@ -20,7 +20,7 @@ const (
 )
 
 func main() {
-	client, err := client.New()
+	client, err := client.New(version)
 	if err != nil {
 		if err := logError(err); err != nil {
 			log.Fatal(err)

@@ -17,6 +17,8 @@ const (
 	ddstatsBlockStartOffset = 0xEF4
 )
 
+const windowsCodeStillActive = 239
+
 var deathTypes = []string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "Opened", "Purged",
 	"Desecrated", "Sacrificed", "Eviscerated", "Annihilated", "Intoxicated",
 	"Envenmonated", "Incarnated", "Discarnated", "Barbed"}
@@ -109,9 +111,14 @@ func (dd *DevilDaggers) Close() {
 	w32.CloseHandle(w32.HANDLE(dd.handle))
 }
 
-// GetConnected returns whether the DevilDaggers struct is currently connected to Devil Daggers.
-func (dd *DevilDaggers) GetConnected() bool {
-	return dd.connected
+// Connected returns whether the DevilDaggers struct is currently connected to Devil Daggers.
+func (dd *DevilDaggers) Connected() bool {
+	code, err := w32.GetExitCodeProcess(w32.HANDLE(dd.handle))
+	if err != nil || code != windowsCodeStillActive {
+		return false
+	}
+
+	return true
 }
 
 func getBaseAddress(pid int) (address, error) {

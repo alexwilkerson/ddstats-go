@@ -105,8 +105,6 @@ func (dd *DevilDaggers) RefreshData() error {
 		return fmt.Errorf("RefreshData: unable to encode data block: %w", err)
 	}
 
-	fmt.Printf("%+v\n", dd.dataBlock)
-
 	return nil
 }
 
@@ -146,7 +144,7 @@ func (dd *DevilDaggers) GetAccuracy() float32 {
 	if dd.dataBlock.DaggersFired == 0 {
 		return 0.0
 	}
-	return float32(dd.dataBlock.DaggersHit) / float32(dd.dataBlock.DaggersFired)
+	return float32(dd.dataBlock.DaggersHit) / float32(dd.dataBlock.DaggersFired) * 100
 }
 
 func (dd *DevilDaggers) GetEnemiesAlive() uint32 {
