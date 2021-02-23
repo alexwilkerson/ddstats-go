@@ -76,7 +76,7 @@ type SubmitGameInput struct {
 	Timer               float32   `json:"inGameTimer"`
 	TimerSlice          []float32 `json:"inGameTimerVector"`
 	TotalGems           uint32    `json:"gems"`
-	TotalGemsSlice      []int32   `json:"gemsVector"`
+	TotalGemsSlice      []uint32  `json:"gemsVector"`
 	Level2time          float32   `json:"levelTwoTime"`
 	Level3time          float32   `json:"levelThreeTime"`
 	Level4time          float32   `json:"levelFourTime"`

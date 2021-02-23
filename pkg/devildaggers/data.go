@@ -32,7 +32,7 @@ const (
 
 const (
 	// StatusTitle is when the user is in the title screen.
-	StatusTitle = iota
+	StatusTitle uint32 = iota
 	// StatusMenu is when the user is in the menu.
 	StatusMenu
 	// StatusLobby is when the user is in the dagger lobby.

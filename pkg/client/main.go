@@ -17,6 +17,7 @@ const (
 )
 
 type Client struct {
+	version    string
 	tickRate   time.Duration
 	uiTickRate time.Duration
 	cfg        *config.Config
@@ -61,6 +62,7 @@ func New(version string) (*Client, error) {
 	dd := devildaggers.New()
 
 	return &Client{
+		version:    version,
 		tickRate:   defaultTickRate,
 		uiTickRate: defaultUITickRate,
 		cfg:        cfg,
@@ -130,6 +132,107 @@ func (c *Client) runDD() {
 			return
 		}
 	}
+}
+
+func (c *Client) runGameCapture() {
+	var gameRecording api.SubmitGameInput
+	oldStatus := devildaggers.StatusTitle
+	var oldTime float32
+	for {
+		select {
+		case <-time.After(c.tickRate):
+			if !c.dd.Connected() {
+				oldStatus = devildaggers.StatusTitle
+				oldTime = 0.0
+				continue
+			}
+			newStatus := c.dd.GetStatus()
+			newTime := c.dd.GetTime()
+			if newStatus == devildaggers.StatusPlaying {
+				if newTime < 1 && (newStatus != oldStatus || oldTime > newTime) {
+					gameRecording = *c.newGameRecording()
+				}
+				if int(newTime)-int(gameRecording.TimerSlice[len(gameRecording.TimerSlice)-1]) >= 1 {
+					c.appendGameState(&gameRecording)
+				}
+				c.updateGameMaxValues(&gameRecording)
+			}
+			oldTime = newTime
+			oldStatus = newStatus
+		case <-c.done:
+			return
+		}
+	}
+}
+
+func (c *Client) newGameRecording() *api.SubmitGameInput {
+	return &api.SubmitGameInput{
+		PlayerID:           c.dd.GetPlayerID(),
+		PlayerName:         c.dd.GetPlayerName(),
+		Granularity:        1,
+		TimerSlice:         []float32{c.dd.GetTime()},
+		TotalGemsSlice:     []uint32{c.dd.GetTotalGems()},
+		HomingSlice:        []uint32{c.dd.GetHomingDaggers()},
+		DaggersFiredSlice:  []uint32{c.dd.GetDaggersFired()},
+		DaggersHitSlice:    []uint32{c.dd.GetDaggersHit()},
+		EnemiesAliveSlice:  []uint32{c.dd.GetEnemiesAlive()},
+		EnemiesKilledSlice: []uint32{c.dd.GetKills()},
+		ReplayPlayerID:     c.dd.GetReplayPlayerID(),
+		Version:            c.version,
+		SurvivalHash:       c.dd.GetLevelHashMD5(),
+	}
+}
+
+func (c *Client) updateGameMaxValues(gameRecording *api.SubmitGameInput) {
+	time := c.dd.GetTime()
+	totalGems := c.dd.GetTotalGems()
+	homing := c.dd.GetHomingDaggers()
+	daggersFired := c.dd.GetDaggersFired()
+	daggersHit := c.dd.GetDaggersHit()
+	enemiesAlive := c.dd.GetEnemiesAlive()
+	enemiesKilled := c.dd.GetKills()
+
+	if totalGems > gameRecording.TotalGemsSlice[len(gameRecording.TotalGemsSlice)-1] {
+		gameRecording.TotalGemsSlice[len(gameRecording.TotalGemsSlice)-1] = totalGems
+	}
+
+	if homing > gameRecording.HomingMax {
+		gameRecording.HomingMax = homing
+		gameRecording.HomingMaxTime = time
+	}
+	if homing > gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1] {
+		gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1] = homing
+	}
+
+	if daggersFired > gameRecording.DaggersFiredSlice[len(gameRecording.DaggersFiredSlice)-1] {
+		gameRecording.DaggersFiredSlice[len(gameRecording.DaggersFiredSlice)-1] = daggersFired
+	}
+
+	if daggersHit > gameRecording.DaggersHitSlice[len(gameRecording.DaggersHitSlice)-1] {
+		gameRecording.DaggersHitSlice[len(gameRecording.DaggersHitSlice)-1] = daggersHit
+	}
+
+	if enemiesAlive > gameRecording.EnemiesAliveMax {
+		gameRecording.EnemiesAliveMax = enemiesAlive
+		gameRecording.EnemiesAliveMaxTime = time
+	}
+	if enemiesAlive > gameRecording.EnemiesAliveSlice[len(gameRecording.EnemiesAliveSlice)-1] {
+		gameRecording.EnemiesAliveSlice[len(gameRecording.EnemiesAliveSlice)-1] = enemiesAlive
+	}
+
+	if enemiesKilled > gameRecording.EnemiesKilledSlice[len(gameRecording.EnemiesKilledSlice)-1] {
+		gameRecording.EnemiesKilledSlice[len(gameRecording.EnemiesKilledSlice)-1] = enemiesKilled
+	}
+}
+
+func (c *Client) appendGameState(gameRecording *api.SubmitGameInput) {
+	gameRecording.TimerSlice = append(gameRecording.TimerSlice, c.dd.GetTime())
+	gameRecording.TotalGemsSlice = append(gameRecording.TotalGemsSlice, c.dd.GetTotalGems())
+	gameRecording.HomingSlice = append(gameRecording.HomingSlice, c.dd.GetHomingDaggers())
+	gameRecording.DaggersFiredSlice = append(gameRecording.DaggersFiredSlice, c.dd.GetDaggersFired())
+	gameRecording.DaggersHitSlice = append(gameRecording.DaggersHitSlice, c.dd.GetDaggersHit())
+	gameRecording.EnemiesAliveSlice = append(gameRecording.EnemiesAliveSlice, c.dd.GetEnemiesAlive())
+	gameRecording.EnemiesKilledSlice = append(gameRecording.EnemiesKilledSlice, c.dd.GetKills())
 }
 
 func (c *Client) runUI() {
