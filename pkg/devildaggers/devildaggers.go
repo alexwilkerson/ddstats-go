@@ -12,9 +12,9 @@ import (
 const (
 	windowName = "Devil Daggers"
 	// baseOffset should be updated if Devil Daggers is ever updated.
-	baseOffset = 0x00252760
+	baseOffset = 0x00226BD0
 	// ddstatsBlockStartOffset should be updated if Devil Daggers is ever updated.
-	ddstatsBlockStartOffset = 0xEF4
+	ddstatsBlockStartOffset = 0x0
 )
 
 const windowsCodeStillActive = 239
@@ -24,7 +24,7 @@ var deathTypes = []string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "
 	"Envenmonated", "Incarnated", "Discarnated", "Barbed"}
 
 // pointerOffsets should be updated if Devil Daggers is ever updated.
-var pointerOffsets = []address{0x0, 0x30, 0x8, 0x60, 0x1A8}
+var pointerOffsets = []address{0xC}
 
 type (
 	handle  w32.HANDLE
@@ -141,6 +141,25 @@ func getBaseAddress(pid int) (address, error) {
 	return address(baseAddress), nil
 }
 
+// func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
+// 	if dd.connected != true {
+// 		return 0, errors.New("getAddressFromPointer: connection to window lost")
+// 	}
+
+// 	pointer, err := dd.getAddressFromPointer(dd.baseAddress + baseOffset)
+// 	if err != nil {
+// 		return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
+// 	}
+// 	for i := range pointerOffsets {
+// 		pointer, err = dd.getAddressFromPointer(pointer + pointerOffsets[i])
+// 		if err != nil {
+// 			return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
+// 		}
+// 	}
+
+// 	return pointer + ddstatsBlockStartOffset, nil
+// }
+
 func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
 	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
@@ -150,14 +169,8 @@ func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
 	if err != nil {
 		return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
 	}
-	for i := range pointerOffsets {
-		pointer, err = dd.getAddressFromPointer(pointer + pointerOffsets[i])
-		if err != nil {
-			return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
-		}
-	}
 
-	return pointer + ddstatsBlockStartOffset, nil
+	return pointer + 0xC, nil
 }
 
 func (dd *DevilDaggers) getAddressFromPointer(p address) (address, error) {

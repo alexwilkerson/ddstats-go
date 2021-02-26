@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"github.com/TheTitanrain/w32"
 )
@@ -48,10 +49,52 @@ const (
 )
 
 type dataBlock struct {
-	DDStatsVersion     uint32
-	PlayerID           uint32
-	UserName           [32]byte
-	Time               float32
+	DDStatsVersion       uint32
+	PlayerID             uint32
+	UserName             [32]byte
+	Time                 float32
+	GemsCollected        uint32
+	Kills                uint32
+	DaggersFired         uint32
+	DaggersHit           uint32
+	EnemiesAlive         uint32
+	LevelGems            uint32
+	HomingDaggers        uint32
+	GemsDespawned        uint32
+	GemsEaten            uint32
+	TotalGems            uint32
+	DaggersEaten         uint32
+	PerEnemyAliveCount   [17]uint16
+	PerEnemyKillCount    [17]uint16
+	IsPlayerAlive        bool
+	IsReplay             bool
+	DeathType            uint8
+	IsInGame             bool
+	ReplayPlayerID       uint32
+	ReplayPlayerName     [32]byte
+	LevelHashMD5         [16]byte
+	TimeLvl2             float32
+	TimeLvl3             float32
+	TimeLvl4             float32
+	LeviDownTime         float32
+	OrbDownTime          float32
+	Status               uint32
+	HomingMax            uint32
+	TimeHomingMax        float32
+	EnemiesAliveMax      uint32
+	TimeEnemiesAliveMax  float32
+	TimeMax              float32
+	StatsBase            [8]byte
+	StatsFramesLoaded    uint32
+	StatsFinishedLoading bool
+	Padding              [7]byte // Padding here because previous data is in a struct with a pointer.
+	StartingHandLevel    uint32
+	StartingHomingCount  uint32
+	StartingTime         float32
+	ProhibitedMods       bool
+}
+
+type statFrame struct {
 	GemsCollected      uint32
 	Kills              uint32
 	DaggersFired       uint32
@@ -64,19 +107,6 @@ type dataBlock struct {
 	TotalGems          uint32
 	PerEnemyAliveCount [17]uint16
 	PerEnemyKillCount  [17]uint16
-	IsPlayerAlive      bool
-	IsReplay           bool
-	DeathType          uint8
-	IsInGame           bool
-	ReplayPlayerID     uint32
-	ReplayPlayerName   [32]byte
-	LevelHashMD5       [16]byte
-	TimeLvl2           float32
-	TimeLvl3           float32
-	TimeLvl4           float32
-	LeviDownTime       float32
-	OrbDownTime        float32
-	Status             uint32
 }
 
 // RefreshData attempts to read the Devil Daggers process memory. The data is acquired based
@@ -87,7 +117,7 @@ func (dd *DevilDaggers) RefreshData() error {
 		return errors.New("RefreshData: connection to window lost")
 	}
 
-	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(dd.ddstatsBlockAddress), dataSize)
+	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(dd.ddstatsBlockAddress), unsafe.Sizeof(*dd.dataBlock))
 	if !ok {
 		return errors.New("RefreshData: unable to read process memory")
 	}
@@ -102,6 +132,7 @@ func (dd *DevilDaggers) RefreshData() error {
 
 	err := binary.Read(byteBuf, binary.LittleEndian, dd.dataBlock)
 	if err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("RefreshData: unable to encode data block: %w", err)
 	}
 
