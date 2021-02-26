@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/TheTitanrain/w32"
@@ -13,7 +14,8 @@ const (
 	windowName = "Devil Daggers"
 	// baseOffset should be updated if Devil Daggers is ever updated.
 	// This is the offset for "dd.exe" + baseOffset found in Cheat Engine.
-	baseOffset = 0x00226BD0
+	baseOffset                   = 0x00226BD0
+	persistentConnectionTickRate = time.Second / 60
 )
 
 const windowsCodeStillActive = 239
@@ -35,6 +37,8 @@ type DevilDaggers struct {
 	ddstatsBlockAddress address
 	dataBlock           *dataBlock
 	statsFrame          []statsFrame
+	errors              chan error
+	done                chan struct{}
 }
 
 // New creates a new DDStats struct to use.
@@ -45,12 +49,44 @@ func New() *DevilDaggers {
 	}
 }
 
+func (dd *DevilDaggers) StartPersistentConnection(errors chan error) {
+	if dd.done != nil {
+		close(dd.done)
+	}
+	dd.done = make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-time.After(persistentConnectionTickRate):
+				if !dd.connected {
+					_, err := dd.Connect()
+					if err != nil {
+						errors <- err
+						continue
+					}
+				}
+				dd.connected = dd.checkConnection()
+			case <-dd.done:
+				dd.Close()
+				dd.connected = false
+				return
+			}
+		}
+	}()
+}
+
+func (dd *DevilDaggers) StopPersistentConnection() {
+	if dd.done != nil {
+		close(dd.done)
+	}
+}
+
 // Connect attempts to make a connection to the Devil Daggers process.
 func (dd *DevilDaggers) Connect() (bool, error) {
 	hwnd := w32.FindWindowW(nil, syscall.StringToUTF16Ptr(windowName))
 	if hwnd == 0 {
 		dd.connected = false
-		return false, fmt.Errorf("Connect: could not find window with name %q", windowName)
+		return false, nil
 	}
 
 	_, pid := w32.GetWindowThreadProcessId(hwnd)
@@ -87,8 +123,12 @@ func (dd *DevilDaggers) Close() {
 	w32.CloseHandle(w32.HANDLE(dd.handle))
 }
 
-// Connected returns whether the DevilDaggers struct is currently connected to Devil Daggers.
-func (dd *DevilDaggers) Connected() bool {
+func (dd *DevilDaggers) CheckConnection() bool {
+	return dd.connected
+}
+
+// CheckConnection returns whether the DevilDaggers struct is currently connected to Devil Daggers.
+func (dd *DevilDaggers) checkConnection() bool {
 	code, err := w32.GetExitCodeProcess(w32.HANDLE(dd.handle))
 	if err != nil || code != windowsCodeStillActive {
 		return false

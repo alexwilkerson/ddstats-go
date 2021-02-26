@@ -98,11 +98,11 @@ func (c *Client) Run() error {
 			return fmt.Errorf("Run: error returned on error channel: %w", err)
 		}
 	}
-
-	return nil
 }
 
 func (c *Client) run() {
+
+	c.dd.StartPersistentConnection(c.errChan)
 	go c.runDD()
 	go c.runUI()
 }
@@ -111,7 +111,7 @@ func (c *Client) runDD() {
 	for {
 		select {
 		case <-time.After(c.tickRate):
-			if !c.dd.Connected() {
+			if !c.dd.CheckConnection() {
 				_, err := c.dd.Connect()
 				if err != nil {
 					c.uiData.Status = consoleui.StatusDevilDaggersNotFound
@@ -141,7 +141,7 @@ func (c *Client) runGameCapture() {
 	for {
 		select {
 		case <-time.After(c.tickRate):
-			if !c.dd.Connected() {
+			if !c.dd.CheckConnection() {
 				oldStatus = devildaggers.StatusTitle
 				oldTime = 0.0
 				continue

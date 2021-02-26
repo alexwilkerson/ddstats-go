@@ -84,10 +84,11 @@ type dataBlock struct {
 	EnemiesAliveMax      uint32
 	TimeEnemiesAliveMax  float32
 	TimeMax              float32
-	StatsBase            uint64 // address to stat frame array
+	Padding1             [4]byte // cause computer science
+	StatsBase            uint64  // address to stat frame array
 	StatsFramesLoaded    uint32
 	StatsFinishedLoading bool
-	Padding              [7]byte // Padding here because previous data is in a struct with a pointer.
+	Padding2             [3]byte // Padding here because previous data is in a struct with a pointer.
 	StartingHandLevel    uint32
 	StartingHomingCount  uint32
 	StartingTime         float32
@@ -147,21 +148,22 @@ func (dd *DevilDaggers) RefreshData() error {
 
 func (dd *DevilDaggers) RefreshStatsFrame() error {
 	if dd.connected != true {
-		return errors.New("RefreshStatsFrame: connection to window lost")
-	}
-
-	framesLoaded := dd.dataBlock.StatsFramesLoaded
-
-	if dd.dataBlock.StatsFramesLoaded < 1 {
-		dd.statsFrame = []statsFrame{}
 		return nil
 	}
 
-	sf := make([]statsFrame, framesLoaded)
+	framesLoaded := int(dd.dataBlock.StatsFramesLoaded)
 
-	fmt.Printf("%X\n", dd.dataBlock.StatsBase)
+	if cap(dd.statsFrame) < framesLoaded {
+		dd.statsFrame = append(dd.statsFrame, make([]statsFrame, framesLoaded-cap(dd.statsFrame))...)
+	}
 
-	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(dd.dataBlock.StatsBase), unsafe.Sizeof(dd.statsFrame)*uintptr(dd.dataBlock.StatsFramesLoaded))
+	dd.statsFrame = dd.statsFrame[:framesLoaded]
+
+	if framesLoaded == 0 {
+		return nil
+	}
+
+	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(dd.dataBlock.StatsBase), unsafe.Sizeof(dd.statsFrame[0])*uintptr(framesLoaded))
 	if !ok {
 		return errors.New("RefreshStatsFrame: unable to read process memory")
 	}
@@ -174,11 +176,13 @@ func (dd *DevilDaggers) RefreshStatsFrame() error {
 		byteBuf.Write(split)
 	}
 
-	err := binary.Read(byteBuf, binary.LittleEndian, sf)
+	err := binary.Read(byteBuf, binary.LittleEndian, dd.statsFrame)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("RefreshStatsFrame: unable to encode data block: %w", err)
 	}
+
+	fmt.Println(dd.statsFrame[1])
 
 	return nil
 
