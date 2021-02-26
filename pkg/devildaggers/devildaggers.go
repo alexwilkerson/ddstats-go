@@ -12,9 +12,8 @@ import (
 const (
 	windowName = "Devil Daggers"
 	// baseOffset should be updated if Devil Daggers is ever updated.
+	// This is the offset for "dd.exe" + baseOffset found in Cheat Engine.
 	baseOffset = 0x00226BD0
-	// ddstatsBlockStartOffset should be updated if Devil Daggers is ever updated.
-	ddstatsBlockStartOffset = 0x0
 )
 
 const windowsCodeStillActive = 239
@@ -22,9 +21,6 @@ const windowsCodeStillActive = 239
 var deathTypes = []string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "Opened", "Purged",
 	"Desecrated", "Sacrificed", "Eviscerated", "Annihilated", "Intoxicated",
 	"Envenmonated", "Incarnated", "Discarnated", "Barbed"}
-
-// pointerOffsets should be updated if Devil Daggers is ever updated.
-var pointerOffsets = []address{0xC}
 
 type (
 	handle  w32.HANDLE
@@ -38,36 +34,16 @@ type DevilDaggers struct {
 	baseAddress         address
 	ddstatsBlockAddress address
 	dataBlock           *dataBlock
+	statsFrame          []statsFrame
 }
 
 // New creates a new DDStats struct to use.
 func New() *DevilDaggers {
 	return &DevilDaggers{
-		dataBlock: &dataBlock{},
+		dataBlock:  &dataBlock{},
+		statsFrame: []statsFrame{},
 	}
 }
-
-// func (dd *DevilDaggers) StartCapture(connected chan<- bool) {
-// 	for {
-// 		select {
-// 		case <-time.After(dd.tickRate):
-// 			if !dd.connected {
-// 				err := dd.Connect()
-// 				if err != nil {
-// 					continue
-// 				}
-// 			}
-// 			dd.RefreshData()
-// 		case <-dd.done:
-// 			fmt.Println("finished")
-// 			break
-// 		}
-// 	}
-// }
-
-// func (dd *DevilDaggers) StopCapture() {
-// 	dd.done <- struct{}{}
-// }
 
 // Connect attempts to make a connection to the Devil Daggers process.
 func (dd *DevilDaggers) Connect() (bool, error) {
@@ -141,25 +117,6 @@ func getBaseAddress(pid int) (address, error) {
 	return address(baseAddress), nil
 }
 
-// func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
-// 	if dd.connected != true {
-// 		return 0, errors.New("getAddressFromPointer: connection to window lost")
-// 	}
-
-// 	pointer, err := dd.getAddressFromPointer(dd.baseAddress + baseOffset)
-// 	if err != nil {
-// 		return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
-// 	}
-// 	for i := range pointerOffsets {
-// 		pointer, err = dd.getAddressFromPointer(pointer + pointerOffsets[i])
-// 		if err != nil {
-// 			return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
-// 		}
-// 	}
-
-// 	return pointer + ddstatsBlockStartOffset, nil
-// }
-
 func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
 	if dd.connected != true {
 		return 0, errors.New("getAddressFromPointer: connection to window lost")
@@ -170,6 +127,7 @@ func (dd *DevilDaggers) getDevilDaggersBlockBaseAddress() (address, error) {
 		return 0, errors.New("getDevilDaggersBlockBaseAddress: could not get base pointer")
 	}
 
+	// 0xC skips the '__ddstats__' header in the memory block.
 	return pointer + 0xC, nil
 }
 

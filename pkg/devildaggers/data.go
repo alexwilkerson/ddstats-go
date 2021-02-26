@@ -84,7 +84,7 @@ type dataBlock struct {
 	EnemiesAliveMax      uint32
 	TimeEnemiesAliveMax  float32
 	TimeMax              float32
-	StatsBase            [8]byte
+	StatsBase            uint64 // address to stat frame array
 	StatsFramesLoaded    uint32
 	StatsFinishedLoading bool
 	Padding              [7]byte // Padding here because previous data is in a struct with a pointer.
@@ -94,7 +94,7 @@ type dataBlock struct {
 	ProhibitedMods       bool
 }
 
-type statFrame struct {
+type statsFrame struct {
 	GemsCollected      uint32
 	Kills              uint32
 	DaggersFired       uint32
@@ -136,7 +136,52 @@ func (dd *DevilDaggers) RefreshData() error {
 		return fmt.Errorf("RefreshData: unable to encode data block: %w", err)
 	}
 
+	err = dd.RefreshStatsFrame()
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("RefreshData: unable to refresh stats frame: %w", err)
+	}
+
 	return nil
+}
+
+func (dd *DevilDaggers) RefreshStatsFrame() error {
+	if dd.connected != true {
+		return errors.New("RefreshStatsFrame: connection to window lost")
+	}
+
+	framesLoaded := dd.dataBlock.StatsFramesLoaded
+
+	if dd.dataBlock.StatsFramesLoaded < 1 {
+		dd.statsFrame = []statsFrame{}
+		return nil
+	}
+
+	sf := make([]statsFrame, framesLoaded)
+
+	fmt.Printf("%X\n", dd.dataBlock.StatsBase)
+
+	buf, _, ok := w32.ReadProcessMemory(w32.HANDLE(dd.handle), uintptr(dd.dataBlock.StatsBase), unsafe.Sizeof(dd.statsFrame)*uintptr(dd.dataBlock.StatsFramesLoaded))
+	if !ok {
+		return errors.New("RefreshStatsFrame: unable to read process memory")
+	}
+
+	byteBuf := bytes.NewBuffer(make([]byte, 0, len(buf)*2))
+
+	for _, b := range buf {
+		split := make([]byte, 2)
+		binary.LittleEndian.PutUint16(split, b)
+		byteBuf.Write(split)
+	}
+
+	err := binary.Read(byteBuf, binary.LittleEndian, sf)
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("RefreshStatsFrame: unable to encode data block: %w", err)
+	}
+
+	return nil
+
 }
 
 func (dd *DevilDaggers) GetDDStatsVersion() uint32 {
@@ -199,6 +244,10 @@ func (dd *DevilDaggers) GetGemsEaten() uint32 {
 }
 
 func (dd *DevilDaggers) GetTotalGems() uint32 {
+	return dd.dataBlock.TotalGems
+}
+
+func (dd *DevilDaggers) GetDaggersEaten() uint32 {
 	return dd.dataBlock.TotalGems
 }
 
@@ -355,7 +404,7 @@ func (dd *DevilDaggers) GetReplayPlayerName() string {
 }
 
 func (dd *DevilDaggers) GetLevelHashMD5() string {
-	return fmt.Sprintf("%x", dd.dataBlock.LevelHashMD5)
+	return fmt.Sprintf("%X", dd.dataBlock.LevelHashMD5)
 }
 
 func (dd *DevilDaggers) GetTimeLvl2() float32 {
@@ -380,6 +429,50 @@ func (dd *DevilDaggers) GetOrbDownTime() float32 {
 
 func (dd *DevilDaggers) GetStatus() uint32 {
 	return dd.dataBlock.Status
+}
+
+func (dd *DevilDaggers) GetHomingMax() uint32 {
+	return dd.dataBlock.HomingMax
+}
+
+func (dd *DevilDaggers) GetHomingMaxTime() float32 {
+	return dd.dataBlock.TimeHomingMax
+}
+
+func (dd *DevilDaggers) GetEnemiesAliveMax() uint32 {
+	return dd.dataBlock.EnemiesAliveMax
+}
+
+func (dd *DevilDaggers) GetEnemiesAliveMaxTime() float32 {
+	return dd.dataBlock.TimeEnemiesAliveMax
+}
+
+func (dd *DevilDaggers) GetTimeMax() float32 {
+	return dd.dataBlock.TimeMax
+}
+
+func (dd *DevilDaggers) GetStatsFramesLoaded() uint32 {
+	return dd.dataBlock.StatsFramesLoaded
+}
+
+func (dd *DevilDaggers) GetStatsFinishedLoading() bool {
+	return dd.dataBlock.StatsFinishedLoading
+}
+
+func (dd *DevilDaggers) GetStartingHandLevel() uint32 {
+	return dd.dataBlock.StartingHandLevel
+}
+
+func (dd *DevilDaggers) GetStartingHomingCount() uint32 {
+	return dd.dataBlock.StartingHomingCount
+}
+
+func (dd *DevilDaggers) GetStartingTime() float32 {
+	return dd.dataBlock.StartingTime
+}
+
+func (dd *DevilDaggers) GetProhibitedMods() bool {
+	return dd.dataBlock.ProhibitedMods
 }
 
 func byteArrayToString(a *[32]byte) string {
