@@ -14,7 +14,8 @@ const (
 	StatusLobby
 	StatusPlaying
 	StatusDead
-	StatusOwnReplay
+	StatusOwnReplayFromLastRun
+	StatusOwnReplayFromLeaderboard
 	StatusOtherReplay
 	StatusConnecting
 	StatusDevilDaggersNotFound
@@ -40,6 +41,7 @@ const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @
 :: :  :   :: :  :   :: : :       :      :   : :     :     :: : :`
 
 type Data struct {
+	Host            string
 	PlayerName      string
 	Version         string
 	UpdateAvailable bool
@@ -56,6 +58,7 @@ type Data struct {
 	EnemiesAlive    int32
 	EnemiesKilled   int32
 	DeathType       uint8
+	LastGameID      int
 }
 
 type ConsoleUI struct {
@@ -96,6 +99,7 @@ func (cui *ConsoleUI) DrawScreen() error {
 	cui.drawRecording()
 	cui.drawLeftSideStats()
 	cui.drawRightSideStats()
+	cui.drawLastGameLabel()
 
 	return nil
 }
@@ -208,7 +212,7 @@ func (cui *ConsoleUI) drawStatus() error {
 	case StatusLobby:
 		statusString = "In dagger lobby"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
-	case StatusOwnReplay:
+	case StatusOwnReplayFromLastRun, StatusOwnReplayFromLeaderboard:
 		statusString = "Watching self replay"
 		statusLabel.TextFgColor = ui.StringToAttribute("green")
 	case StatusOtherReplay:
@@ -319,4 +323,20 @@ func (cui *ConsoleUI) drawRightSideStats() {
 	statsRight.Height = 5
 
 	ui.Render(statsRight)
+}
+
+func (cui *ConsoleUI) drawLastGameLabel() {
+	lastGameURL := "None."
+	if cui.data.LastGameID != 0 {
+		lastGameURL = fmt.Sprintf("%s/games/%d", cui.data.Host, cui.data.LastGameID)
+	}
+
+	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)
+	lastGameLabel.SetX(ui.TermWidth()/2 - 34)
+	lastGameLabel.SetY(20)
+	lastGameLabel.Border = false
+	lastGameLabel.Height = 1
+	lastGameLabel.Width = 66
+
+	ui.Render(lastGameLabel)
 }

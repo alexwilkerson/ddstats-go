@@ -42,8 +42,10 @@ const (
 	StatusPlaying
 	// StatusDead is when the user is dead.
 	StatusDead
-	// StatusOwnReplay is when the user is watching their own replay
-	StatusOwnReplay
+	// StatusOwnReplayFromLastRun is when the user is watching their own replay directly after a run.
+	StatusOwnReplayFromLastRun
+	// StatusOwnReplayFromLeaderboard is when the user is watching their own replay from the leaderboard.
+	StatusOwnReplayFromLeaderboard
 	// StatusOtherReplay is when the user is watching another person's replay.
 	StatusOtherReplay
 )
@@ -134,7 +136,6 @@ func (dd *DevilDaggers) RefreshData() error {
 
 	err := binary.Read(byteBuf, binary.LittleEndian, dd.dataBlock)
 	if err != nil {
-		fmt.Println(err)
 		return fmt.Errorf("RefreshData: unable to encode data block: %w", err)
 	}
 
@@ -169,7 +170,6 @@ func (dd *DevilDaggers) refreshStatsFrame() error {
 
 	err := binary.Read(byteBuf, binary.LittleEndian, dd.statsFrame)
 	if err != nil {
-		fmt.Println(err)
 		return fmt.Errorf("RefreshStatsFrame: unable to encode data block: %w", err)
 	}
 

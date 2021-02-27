@@ -8,6 +8,7 @@ import (
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/consoleui"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
+	"github.com/atotto/clipboard"
 	ui "github.com/gizak/termui"
 )
 
@@ -17,17 +18,18 @@ const (
 )
 
 type Client struct {
-	version    string
-	tickRate   time.Duration
-	uiTickRate time.Duration
-	cfg        *config.Config
-	ui         *consoleui.ConsoleUI
-	uiData     *consoleui.Data
-	dd         *devildaggers.DevilDaggers
-	apiClient  *api.Client
-	loggedIn   bool
-	errChan    chan error
-	done       chan struct{}
+	version             string
+	tickRate            time.Duration
+	uiTickRate          time.Duration
+	cfg                 *config.Config
+	ui                  *consoleui.ConsoleUI
+	uiData              *consoleui.Data
+	dd                  *devildaggers.DevilDaggers
+	apiClient           *api.Client
+	loggedIn            bool
+	lastSubmittedGameID int
+	errChan             chan error
+	done                chan struct{}
 }
 
 func New(version string) (*Client, error) {
@@ -49,6 +51,7 @@ func New(version string) (*Client, error) {
 	// TODO: handle invalid versions
 
 	uiData := consoleui.Data{
+		Host:            cfg.Host,
 		MOTD:            resp.MOTD,
 		UpdateAvailable: resp.UpdateAvailable,
 		Version:         version,
@@ -92,7 +95,7 @@ func (c *Client) Run() error {
 			case "<f12>":
 				config.WriteDefaultConfigFile()
 			case "<MouseLeft>":
-				copyGameURLToClipboard()
+				c.copyGameURLToClipboard()
 			}
 		case err := <-c.errChan:
 			close(c.done)
@@ -114,6 +117,7 @@ func (c *Client) runDD2() {
 		case <-time.After(c.tickRate):
 			if !c.dd.CheckConnection() {
 				c.clearUIData()
+				c.uiData.Status = consoleui.StatusDevilDaggersNotFound
 				continue
 			}
 			c.populateUIData()
@@ -131,6 +135,7 @@ func (c *Client) runDD() {
 		case <-time.After(c.tickRate):
 			if !c.dd.CheckConnection() {
 				c.clearUIData()
+				c.uiData.Status = consoleui.StatusDevilDaggersNotFound
 				continue
 			}
 
@@ -139,22 +144,26 @@ func (c *Client) runDD() {
 			newStatus := c.dd.GetStatus()
 
 			// when a new game has started
-			if oldStatus != devildaggers.StatusPlaying && newStatus == devildaggers.StatusPlaying {
+			if oldStatus != devildaggers.StatusPlaying && newStatus == devildaggers.StatusPlaying ||
+				oldStatus != devildaggers.StatusOtherReplay && newStatus == devildaggers.StatusOtherReplay ||
+				oldStatus != devildaggers.StatusOwnReplayFromLeaderboard && newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
 				statsSent = false
 			}
 
-			if newStatus == devildaggers.StatusDead && c.dd.GetStatsFinishedLoading() && !statsSent {
-				// send stats
-				submitGameInput, err := c.compileGameRecording()
-				if err != nil {
-					c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
+			if c.dd.GetStatsFinishedLoading() && !statsSent {
+				if newStatus == devildaggers.StatusDead || newStatus == devildaggers.StatusOtherReplay || newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
+					// send stats
+					submitGameInput, err := c.compileGameRecording()
+					if err != nil {
+						c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
+					}
+					gameID, err := c.apiClient.SubmitGame(submitGameInput)
+					if err != nil {
+						c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
+					}
+					c.lastSubmittedGameID = gameID
+					statsSent = true
 				}
-				gameID, err := c.apiClient.SubmitGame(submitGameInput)
-				if err != nil {
-					c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
-				}
-				_ = gameID
-				statsSent = true
 			}
 
 			oldStatus = newStatus
@@ -248,48 +257,6 @@ func (c *Client) compileGameRecording() (*api.SubmitGameInput, error) {
 	return &submitGameInput, nil
 }
 
-func (c *Client) updateGameMaxValues(gameRecording *api.SubmitGameInput) {
-	time := c.dd.GetTime()
-	totalGems := c.dd.GetTotalGems()
-	homing := c.dd.GetHomingDaggers()
-	daggersFired := c.dd.GetDaggersFired()
-	daggersHit := c.dd.GetDaggersHit()
-	enemiesAlive := c.dd.GetEnemiesAlive()
-	enemiesKilled := c.dd.GetKills()
-
-	if totalGems > gameRecording.TotalGemsSlice[len(gameRecording.TotalGemsSlice)-1] {
-		gameRecording.TotalGemsSlice[len(gameRecording.TotalGemsSlice)-1] = totalGems
-	}
-
-	if homing > gameRecording.HomingMax {
-		gameRecording.HomingMax = homing
-		gameRecording.HomingMaxTime = time
-	}
-	if homing > gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1] {
-		gameRecording.HomingSlice[len(gameRecording.HomingSlice)-1] = homing
-	}
-
-	if daggersFired > gameRecording.DaggersFiredSlice[len(gameRecording.DaggersFiredSlice)-1] {
-		gameRecording.DaggersFiredSlice[len(gameRecording.DaggersFiredSlice)-1] = daggersFired
-	}
-
-	if daggersHit > gameRecording.DaggersHitSlice[len(gameRecording.DaggersHitSlice)-1] {
-		gameRecording.DaggersHitSlice[len(gameRecording.DaggersHitSlice)-1] = daggersHit
-	}
-
-	if enemiesAlive > gameRecording.EnemiesAliveMax {
-		gameRecording.EnemiesAliveMax = enemiesAlive
-		gameRecording.EnemiesAliveMaxTime = time
-	}
-	if enemiesAlive > gameRecording.EnemiesAliveSlice[len(gameRecording.EnemiesAliveSlice)-1] {
-		gameRecording.EnemiesAliveSlice[len(gameRecording.EnemiesAliveSlice)-1] = enemiesAlive
-	}
-
-	if enemiesKilled > gameRecording.EnemiesKilledSlice[len(gameRecording.EnemiesKilledSlice)-1] {
-		gameRecording.EnemiesKilledSlice[len(gameRecording.EnemiesKilledSlice)-1] = enemiesKilled
-	}
-}
-
 func (c *Client) appendGameState(gameRecording *api.SubmitGameInput) {
 	gameRecording.TimerSlice = append(gameRecording.TimerSlice, c.dd.GetTime())
 	gameRecording.TotalGemsSlice = append(gameRecording.TotalGemsSlice, c.dd.GetTotalGems())
@@ -311,6 +278,7 @@ func (c *Client) runUI() {
 				return
 			}
 		case <-c.done:
+			c.ui.ClearScreen()
 			return
 		}
 	}
@@ -333,7 +301,13 @@ func (c *Client) clearUIData() {
 func (c *Client) populateUIData() {
 	c.uiData.Status = c.dd.GetStatus()
 	c.uiData.PlayerName = c.dd.GetPlayerName()
-	if c.dd.GetStatus() == devildaggers.StatusPlaying {
+	if c.uiData.PlayerName == "" {
+		c.uiData.Status = consoleui.StatusConnecting
+		return
+	}
+	c.uiData.LastGameID = c.lastSubmittedGameID
+	status := c.dd.GetStatus()
+	if status == devildaggers.StatusPlaying || status == devildaggers.StatusOtherReplay || status == devildaggers.StatusOwnReplayFromLastRun || status == devildaggers.StatusOwnReplayFromLeaderboard {
 		c.uiData.Recording = true
 		c.uiData.Timer = c.dd.GetTime()
 		c.uiData.DaggersHit = c.dd.GetDaggersHit()
@@ -351,9 +325,8 @@ func (c *Client) populateUIData() {
 	}
 }
 
-func copyGameURLToClipboard() {
-	// if lastGameURL[:4] == "https" {
-	// 	lastGameURLCopyTime = time.Now()
-	// 	clipboard.WriteAll(lastGameURL)
-	// }
+func (c *Client) copyGameURLToClipboard() {
+	if c.lastSubmittedGameID != 0 {
+		clipboard.WriteAll(fmt.Sprintf("%s/games/%d", c.cfg.Host, c.lastSubmittedGameID))
+	}
 }
