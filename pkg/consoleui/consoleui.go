@@ -44,17 +44,17 @@ type Data struct {
 	Version         string
 	UpdateAvailable bool
 	MOTD            string
-	Status          uint32
-	OnlineStatus    uint
+	Status          int32
+	OnlineStatus    int
 	Recording       bool
 	Timer           float32
-	DaggersHit      uint32
-	DaggersFired    uint32
+	DaggersHit      int32
+	DaggersFired    int32
 	Accuracy        float32
-	TotalGems       uint32
-	Homing          uint32
-	EnemiesAlive    uint32
-	EnemiesKilled   uint32
+	TotalGems       int32
+	Homing          int32
+	EnemiesAlive    int32
+	EnemiesKilled   int32
 	DeathType       uint8
 }
 

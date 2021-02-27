@@ -77,7 +77,7 @@ func New(version string) (*Client, error) {
 
 func (c *Client) Run() error {
 	defer c.ui.Close()
-	defer c.dd.Close()
+	defer c.dd.StopPersistentConnection()
 
 	go c.run()
 
@@ -95,6 +95,7 @@ func (c *Client) Run() error {
 				copyGameURLToClipboard()
 			}
 		case err := <-c.errChan:
+			close(c.done)
 			return fmt.Errorf("Run: error returned on error channel: %w", err)
 		}
 	}
@@ -107,24 +108,12 @@ func (c *Client) run() {
 	go c.runUI()
 }
 
-func (c *Client) runDD() {
+func (c *Client) runDD2() {
 	for {
 		select {
 		case <-time.After(c.tickRate):
 			if !c.dd.CheckConnection() {
-				_, err := c.dd.Connect()
-				if err != nil {
-					c.uiData.Status = consoleui.StatusDevilDaggersNotFound
-					c.clearUIData()
-					continue
-				}
-			}
-			// if !c.loggedIn {
-
-			// }
-			err := c.dd.RefreshData()
-			if err != nil {
-				c.uiData.Status = consoleui.StatusDevilDaggersNotFound
+				c.clearUIData()
 				continue
 			}
 			c.populateUIData()
@@ -134,53 +123,129 @@ func (c *Client) runDD() {
 	}
 }
 
-func (c *Client) runGameCapture() {
-	var gameRecording api.SubmitGameInput
-	oldStatus := devildaggers.StatusTitle
-	var oldTime float32
+func (c *Client) runDD() {
+	var oldStatus int32
+	var statsSent bool
 	for {
 		select {
 		case <-time.After(c.tickRate):
 			if !c.dd.CheckConnection() {
-				oldStatus = devildaggers.StatusTitle
-				oldTime = 0.0
+				c.clearUIData()
 				continue
 			}
+
+			c.populateUIData()
+
 			newStatus := c.dd.GetStatus()
-			newTime := c.dd.GetTime()
-			if newStatus == devildaggers.StatusPlaying {
-				if newTime < 1 && (newStatus != oldStatus || oldTime > newTime) {
-					gameRecording = *c.newGameRecording()
-				}
-				if int(newTime)-int(gameRecording.TimerSlice[len(gameRecording.TimerSlice)-1]) >= 1 {
-					c.appendGameState(&gameRecording)
-				}
-				c.updateGameMaxValues(&gameRecording)
+
+			// when a new game has started
+			if oldStatus != devildaggers.StatusPlaying && newStatus == devildaggers.StatusPlaying {
+				statsSent = false
 			}
-			oldTime = newTime
+
+			if newStatus == devildaggers.StatusDead && c.dd.GetStatsFinishedLoading() && !statsSent {
+				// send stats
+				submitGameInput, err := c.compileGameRecording()
+				if err != nil {
+					c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
+				}
+				gameID, err := c.apiClient.SubmitGame(submitGameInput)
+				if err != nil {
+					c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
+				}
+				_ = gameID
+				statsSent = true
+			}
+
 			oldStatus = newStatus
 		case <-c.done:
 			return
 		}
 	}
+	// for {
+	// 	select {
+	// 	case <-time.After(c.tickRate):
+	// 		if !c.dd.CheckConnection() {
+	// 			oldStatus = devildaggers.StatusTitle
+	// 			oldTime = 0.0
+	// 			continue
+	// 		}
+	// 		newStatus := c.dd.GetStatus()
+	// 		newTime := c.dd.GetTime()
+	// 		if newStatus == devildaggers.StatusPlaying {
+	// 			if newTime < 1 && (newStatus != oldStatus || oldTime > newTime) {
+	// 				gameRecording, err = *c.newGameRecording()
+	// 			}
+	// 			if int(newTime)-int(gameRecording.TimerSlice[len(gameRecording.TimerSlice)-1]) >= 1 {
+	// 				c.appendGameState(&gameRecording)
+	// 			}
+	// 			c.updateGameMaxValues(&gameRecording)
+	// 		}
+	// 		oldTime = newTime
+	// 		oldStatus = newStatus
+	// 	case <-c.done:
+	// 		return
+	// 	}
+	// }
 }
 
-func (c *Client) newGameRecording() *api.SubmitGameInput {
-	return &api.SubmitGameInput{
-		PlayerID:           c.dd.GetPlayerID(),
-		PlayerName:         c.dd.GetPlayerName(),
-		Granularity:        1,
-		TimerSlice:         []float32{c.dd.GetTime()},
-		TotalGemsSlice:     []uint32{c.dd.GetTotalGems()},
-		HomingSlice:        []uint32{c.dd.GetHomingDaggers()},
-		DaggersFiredSlice:  []uint32{c.dd.GetDaggersFired()},
-		DaggersHitSlice:    []uint32{c.dd.GetDaggersHit()},
-		EnemiesAliveSlice:  []uint32{c.dd.GetEnemiesAlive()},
-		EnemiesKilledSlice: []uint32{c.dd.GetKills()},
-		ReplayPlayerID:     c.dd.GetReplayPlayerID(),
-		Version:            c.version,
-		SurvivalHash:       c.dd.GetLevelHashMD5(),
+func (c *Client) compileGameRecording() (*api.SubmitGameInput, error) {
+	submitGameInput := api.SubmitGameInput{
+		PlayerID:            c.dd.GetPlayerID(),
+		PlayerName:          c.dd.GetPlayerName(),
+		Granularity:         1,
+		Timer:               c.dd.GetTime(),
+		TimerSlice:          []float32{},
+		TotalGemsSlice:      []int32{},
+		Level2time:          c.dd.GetTimeLvl2(),
+		Level3time:          c.dd.GetTimeLvl3(),
+		Level4time:          c.dd.GetTimeLvl4(),
+		LeviDownTime:        c.dd.GetLeviathanDownTime(),
+		OrbDownTime:         c.dd.GetOrbDownTime(),
+		HomingSlice:         []int32{},
+		HomingMax:           c.dd.GetHomingMax(),
+		HomingMaxTime:       c.dd.GetHomingMaxTime(),
+		DaggersFired:        c.dd.GetDaggersFired(),
+		DaggersFiredSlice:   []int32{},
+		DaggersHit:          c.dd.GetDaggersHit(),
+		DaggersHitSlice:     []int32{},
+		EnemiesAlive:        c.dd.GetEnemiesAlive(),
+		EnemiesAliveSlice:   []int32{},
+		EnemiesAliveMax:     c.dd.GetEnemiesAliveMax(),
+		EnemiesAliveMaxTime: c.dd.GetEnemiesAliveMaxTime(),
+		EnemiesKilled:       c.dd.GetKills(),
+		EnemiesKilledSlice:  []int32{},
+		DeathType:           c.dd.GetDeathType(),
+		ReplayPlayerID:      c.dd.GetReplayPlayerID(),
+		Version:             c.version,
+		SurvivalHash:        c.dd.GetLevelHashMD5(),
 	}
+
+	statsFrame, err := c.dd.GetStatsFrame()
+	if err != nil {
+		return nil, fmt.Errorf("newGameRecording: could not refresh stats frame: %w", err)
+	}
+
+	for i, sf := range statsFrame {
+		if i == len(statsFrame)-1 {
+			submitGameInput.TimerSlice = append(submitGameInput.TimerSlice, c.dd.GetTime())
+		} else {
+			submitGameInput.TimerSlice = append(submitGameInput.TimerSlice, c.dd.GetStartingTime()+float32(i))
+		}
+		submitGameInput.TotalGemsSlice = append(submitGameInput.TotalGemsSlice, sf.TotalGems)
+		submitGameInput.HomingSlice = append(submitGameInput.HomingSlice, sf.HomingDaggers)
+		submitGameInput.DaggersFiredSlice = append(submitGameInput.DaggersFiredSlice, sf.DaggersFired)
+		submitGameInput.DaggersHitSlice = append(submitGameInput.DaggersHitSlice, sf.DaggersHit)
+		submitGameInput.EnemiesAliveSlice = append(submitGameInput.EnemiesAliveSlice, sf.EnemiesAlive)
+		submitGameInput.EnemiesKilledSlice = append(submitGameInput.EnemiesKilledSlice, sf.Kills)
+	}
+
+	lastFrame := statsFrame[len(statsFrame)-1]
+
+	submitGameInput.TotalGems = lastFrame.TotalGems
+	submitGameInput.Homing = lastFrame.HomingDaggers
+
+	return &submitGameInput, nil
 }
 
 func (c *Client) updateGameMaxValues(gameRecording *api.SubmitGameInput) {

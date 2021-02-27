@@ -70,32 +70,34 @@ func (c *Client) InitConnection(version string) (*GetConnectionResult, error) {
 }
 
 type SubmitGameInput struct {
-	PlayerID            uint32    `json:"playerID"`
+	PlayerID            int32     `json:"playerID"`
 	PlayerName          string    `json:"playerName"`
-	Granularity         uint32    `json:"granularity"`
+	Granularity         int32     `json:"granularity"`
 	Timer               float32   `json:"inGameTimer"`
 	TimerSlice          []float32 `json:"inGameTimerVector"`
-	TotalGems           uint32    `json:"gems"`
-	TotalGemsSlice      []uint32  `json:"gemsVector"`
+	TotalGems           int32     `json:"gems"`
+	TotalGemsSlice      []int32   `json:"gemsVector"`
 	Level2time          float32   `json:"levelTwoTime"`
 	Level3time          float32   `json:"levelThreeTime"`
 	Level4time          float32   `json:"levelFourTime"`
-	Homing              uint32    `json:"homingDaggers"`
-	HomingSlice         []uint32  `json:"homingDaggersVector"`
-	HomingMax           uint32    `json:"homingDaggersMax"`
+	LeviDownTime        float32   `json:"leviDownTime"`
+	OrbDownTime         float32   `json:"orbDownTime"`
+	Homing              int32     `json:"homingDaggers"`
+	HomingSlice         []int32   `json:"homingDaggersVector"`
+	HomingMax           int32     `json:"homingDaggersMax"`
 	HomingMaxTime       float32   `json:"homingDaggersMaxTime"`
-	DaggersFired        uint32    `json:"daggersFired"`
-	DaggersFiredSlice   []uint32  `json:"daggersFiredVector"`
-	DaggersHit          uint32    `json:"daggersHit"`
-	DaggersHitSlice     []uint32  `json:"daggersHitVector"`
-	EnemiesAlive        uint32    `json:"enemiesAlive"`
-	EnemiesAliveSlice   []uint32  `json:"enemiesAliveVector"`
-	EnemiesAliveMax     uint32    `json:"enemiesAliveMax"`
+	DaggersFired        int32     `json:"daggersFired"`
+	DaggersFiredSlice   []int32   `json:"daggersFiredVector"`
+	DaggersHit          int32     `json:"daggersHit"`
+	DaggersHitSlice     []int32   `json:"daggersHitVector"`
+	EnemiesAlive        int32     `json:"enemiesAlive"`
+	EnemiesAliveSlice   []int32   `json:"enemiesAliveVector"`
+	EnemiesAliveMax     int32     `json:"enemiesAliveMax"`
 	EnemiesAliveMaxTime float32   `json:"enemiesAliveMaxTime"`
-	EnemiesKilled       uint32    `json:"enemiesKilled"`
-	EnemiesKilledSlice  []uint32  `json:"enemiesKilledVector"`
-	DeathType           uint32    `json:"deathType"`
-	ReplayPlayerID      uint32    `json:"replayPlayerID"`
+	EnemiesKilled       int32     `json:"enemiesKilled"`
+	EnemiesKilledSlice  []int32   `json:"enemiesKilledVector"`
+	DeathType           uint8     `json:"deathType"`
+	ReplayPlayerID      int32     `json:"replayPlayerID"`
 	Version             string    `json:"version"`
 	SurvivalHash        string    `json:"survivalHash"`
 }
@@ -110,7 +112,7 @@ func (c *Client) SubmitGame(submitGameInput *SubmitGameInput) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("SubmitGame: error connecting to site: %w", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
 		return 0, fmt.Errorf("SubmitGame: invalid response %s", resp.Status)
@@ -118,12 +120,15 @@ func (c *Client) SubmitGame(submitGameInput *SubmitGameInput) (int, error) {
 
 	var result map[string]interface{}
 
-	json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return 0, fmt.Errorf("SubmitGame: error decoding json: %w", err)
+	}
 
 	v, ok := result["game_id"]
 	if !ok {
 		return 0, errors.New("SubmitGame: no game id found in response")
 	}
 
-	return v.(int), nil
+	return int(v.(float64)), nil
 }

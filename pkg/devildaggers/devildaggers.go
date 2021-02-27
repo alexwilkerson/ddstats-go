@@ -18,7 +18,7 @@ const (
 	persistentConnectionTickRate = time.Second / 60
 )
 
-const windowsCodeStillActive = 239
+const windowsCodeStillActive = 259
 
 var deathTypes = []string{"Fallen", "Swarmed", "Impaled", "Gored", "Infested", "Opened", "Purged",
 	"Desecrated", "Sacrificed", "Eviscerated", "Annihilated", "Intoxicated",
@@ -36,7 +36,7 @@ type DevilDaggers struct {
 	baseAddress         address
 	ddstatsBlockAddress address
 	dataBlock           *dataBlock
-	statsFrame          []statsFrame
+	statsFrame          []StatsFrame
 	errors              chan error
 	done                chan struct{}
 }
@@ -45,7 +45,7 @@ type DevilDaggers struct {
 func New() *DevilDaggers {
 	return &DevilDaggers{
 		dataBlock:  &dataBlock{},
-		statsFrame: []statsFrame{},
+		statsFrame: []StatsFrame{},
 	}
 }
 
@@ -59,13 +59,24 @@ func (dd *DevilDaggers) StartPersistentConnection(errors chan error) {
 			select {
 			case <-time.After(persistentConnectionTickRate):
 				if !dd.connected {
-					_, err := dd.Connect()
+					connected, err := dd.Connect()
 					if err != nil {
-						errors <- err
+						errors <- fmt.Errorf("StartPersistentConnection: could not connect to devil daggers: %w", err)
+						continue
+					}
+					dd.connected = connected
+					if !dd.connected {
 						continue
 					}
 				}
 				dd.connected = dd.checkConnection()
+				if dd.connected {
+					err := dd.RefreshData()
+					if err != nil {
+						errors <- fmt.Errorf("StartPersistentConnection: could not refresh data: %w", err)
+						continue
+					}
+				}
 			case <-dd.done:
 				dd.Close()
 				dd.connected = false
