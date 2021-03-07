@@ -35,7 +35,7 @@ type DevilDaggers struct {
 	handle              handle
 	baseAddress         address
 	ddstatsBlockAddress address
-	dataBlock           *dataBlock
+	dataBlock           *DataBlock
 	statsFrame          []StatsFrame
 	errors              chan error
 	done                chan struct{}
@@ -44,7 +44,7 @@ type DevilDaggers struct {
 // New creates a new DDStats struct to use.
 func New() *DevilDaggers {
 	return &DevilDaggers{
-		dataBlock:  &dataBlock{},
+		dataBlock:  &DataBlock{},
 		statsFrame: []StatsFrame{},
 	}
 }

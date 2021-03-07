@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alexwilkerson/ddstats-go/pkg/api"
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/consoleui"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
+	"github.com/alexwilkerson/ddstats-go/pkg/grpcclient"
+	pb "github.com/alexwilkerson/ddstats-server/gamesubmission"
 	"github.com/atotto/clipboard"
 	ui "github.com/gizak/termui"
 )
@@ -25,35 +26,37 @@ type Client struct {
 	ui                  *consoleui.ConsoleUI
 	uiData              *consoleui.Data
 	dd                  *devildaggers.DevilDaggers
-	apiClient           *api.Client
+	grpcClient          *grpcclient.Client
 	loggedIn            bool
+	statsSent           bool
 	lastSubmittedGameID int
 	errChan             chan error
 	done                chan struct{}
 }
 
-func New(version string) (*Client, error) {
+func New(version string, grpcAddr string) (*Client, error) {
 	cfg, err := config.New()
 	if err != nil {
 		return nil, fmt.Errorf("New: unable to get config: %w", err)
 	}
 
-	apiClient, err := api.New(cfg.Host)
+	grpcClient, err := grpcclient.New(grpcAddr)
 	if err != nil {
-		return nil, fmt.Errorf("New: could not create api client: %w", err)
+		return nil, fmt.Errorf("New: unable to initialize grpc client: %w", err)
 	}
 
-	resp, err := apiClient.InitConnection(version)
+	clientConnectReply, err := grpcClient.ClientConnect(version)
 	if err != nil {
-		return nil, fmt.Errorf("New: unable to initialize connection: %w", err)
+		return nil, fmt.Errorf("New: unable to connect to server: %w", err)
 	}
 
 	// TODO: handle invalid versions
 
 	uiData := consoleui.Data{
 		Host:            cfg.Host,
-		MOTD:            resp.MOTD,
-		UpdateAvailable: resp.UpdateAvailable,
+		MOTD:            clientConnectReply.GetMotd(),
+		UpdateAvailable: clientConnectReply.UpdateAvailable,
+		ValidVersion:    clientConnectReply.ValidVersion,
 		Version:         version,
 	}
 
@@ -72,15 +75,18 @@ func New(version string) (*Client, error) {
 		ui:         ui,
 		uiData:     &uiData,
 		dd:         dd,
-		apiClient:  apiClient,
+		grpcClient: grpcClient,
+		statsSent:  true, // this is true to prevent stats being sent when game is opened while on death screen
 		errChan:    make(chan error),
 		done:       make(chan struct{}),
 	}, nil
 }
 
+// Run starts the client.
 func (c *Client) Run() error {
 	defer c.ui.Close()
 	defer c.dd.StopPersistentConnection()
+	defer c.grpcClient.Close()
 
 	go c.run()
 
@@ -129,7 +135,6 @@ func (c *Client) runDD2() {
 
 func (c *Client) runDD() {
 	var oldStatus int32
-	var statsSent bool
 	for {
 		select {
 		case <-time.After(c.tickRate):
@@ -147,22 +152,22 @@ func (c *Client) runDD() {
 			if oldStatus != devildaggers.StatusPlaying && newStatus == devildaggers.StatusPlaying ||
 				oldStatus != devildaggers.StatusOtherReplay && newStatus == devildaggers.StatusOtherReplay ||
 				oldStatus != devildaggers.StatusOwnReplayFromLeaderboard && newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
-				statsSent = false
+				c.statsSent = false
 			}
 
-			if c.dd.GetStatsFinishedLoading() && !statsSent {
+			if c.dd.GetStatsFinishedLoading() && !c.statsSent {
 				if newStatus == devildaggers.StatusDead || newStatus == devildaggers.StatusOtherReplay || newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
 					// send stats
-					submitGameInput, err := c.compileGameRecording()
+					submitGameRequest, err := c.compileGameRequest()
 					if err != nil {
 						c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
 					}
-					gameID, err := c.apiClient.SubmitGame(submitGameInput)
+					gameID, err := c.grpcClient.SubmitGame(submitGameRequest)
 					if err != nil {
 						c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
 					}
 					c.lastSubmittedGameID = gameID
-					statsSent = true
+					c.statsSent = true
 				}
 			}
 
@@ -171,63 +176,33 @@ func (c *Client) runDD() {
 			return
 		}
 	}
-	// for {
-	// 	select {
-	// 	case <-time.After(c.tickRate):
-	// 		if !c.dd.CheckConnection() {
-	// 			oldStatus = devildaggers.StatusTitle
-	// 			oldTime = 0.0
-	// 			continue
-	// 		}
-	// 		newStatus := c.dd.GetStatus()
-	// 		newTime := c.dd.GetTime()
-	// 		if newStatus == devildaggers.StatusPlaying {
-	// 			if newTime < 1 && (newStatus != oldStatus || oldTime > newTime) {
-	// 				gameRecording, err = *c.newGameRecording()
-	// 			}
-	// 			if int(newTime)-int(gameRecording.TimerSlice[len(gameRecording.TimerSlice)-1]) >= 1 {
-	// 				c.appendGameState(&gameRecording)
-	// 			}
-	// 			c.updateGameMaxValues(&gameRecording)
-	// 		}
-	// 		oldTime = newTime
-	// 		oldStatus = newStatus
-	// 	case <-c.done:
-	// 		return
-	// 	}
-	// }
 }
 
-func (c *Client) compileGameRecording() (*api.SubmitGameInput, error) {
-	submitGameInput := api.SubmitGameInput{
-		PlayerID:            c.dd.GetPlayerID(),
-		PlayerName:          c.dd.GetPlayerName(),
-		Granularity:         1,
-		Timer:               c.dd.GetTime(),
-		TimerSlice:          []float32{},
-		TotalGemsSlice:      []int32{},
-		Level2time:          c.dd.GetTimeLvl2(),
-		Level3time:          c.dd.GetTimeLvl3(),
-		Level4time:          c.dd.GetTimeLvl4(),
-		LeviDownTime:        c.dd.GetLeviathanDownTime(),
-		OrbDownTime:         c.dd.GetOrbDownTime(),
-		HomingSlice:         []int32{},
-		HomingMax:           c.dd.GetHomingMax(),
-		HomingMaxTime:       c.dd.GetHomingMaxTime(),
-		DaggersFired:        c.dd.GetDaggersFired(),
-		DaggersFiredSlice:   []int32{},
-		DaggersHit:          c.dd.GetDaggersHit(),
-		DaggersHitSlice:     []int32{},
-		EnemiesAlive:        c.dd.GetEnemiesAlive(),
-		EnemiesAliveSlice:   []int32{},
-		EnemiesAliveMax:     c.dd.GetEnemiesAliveMax(),
-		EnemiesAliveMaxTime: c.dd.GetEnemiesAliveMaxTime(),
-		EnemiesKilled:       c.dd.GetKills(),
-		EnemiesKilledSlice:  []int32{},
-		DeathType:           c.dd.GetDeathType(),
-		ReplayPlayerID:      c.dd.GetReplayPlayerID(),
-		Version:             c.version,
-		SurvivalHash:        c.dd.GetLevelHashMD5(),
+func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
+	playerID := c.dd.GetPlayerID()
+	var replayPlayerID int32
+	if c.dd.GetIsReplay() {
+		playerID = c.dd.GetReplayPlayerID()
+		replayPlayerID = c.dd.GetPlayerID()
+	}
+	submitGameRequest := pb.SubmitGameRequest{
+		Version:              c.version,
+		PlayerID:             playerID,
+		PlayerName:           c.dd.GetPlayerName(),
+		LevelHashMD5:         c.dd.GetLevelHashMD5(),
+		TimeLvll2:            c.dd.GetTimeLvl2(),
+		TimeLvll3:            c.dd.GetTimeLvl3(),
+		TimeLvll4:            c.dd.GetTimeLvl4(),
+		TimeLeviDown:         c.dd.GetLeviathanDownTime(),
+		TimeOrbDown:          c.dd.GetOrbDownTime(),
+		EnemiesAliveMax:      c.dd.GetEnemiesAliveMax(),
+		EnemiesAliveMaxTime:  c.dd.GetEnemiesAliveMaxTime(),
+		HomingDaggersMax:     c.dd.GetHomingMax(),
+		HomingDaggersMaxTime: c.dd.GetHomingMaxTime(),
+		DeathType:            uint32(c.dd.GetDeathType()),
+		IsReplay:             c.dd.GetIsReplay(),
+		ReplayPlayerID:       replayPlayerID,
+		Stats:                []*pb.StatFrame{},
 	}
 
 	statsFrame, err := c.dd.GetStatsFrame()
@@ -235,36 +210,50 @@ func (c *Client) compileGameRecording() (*api.SubmitGameInput, error) {
 		return nil, fmt.Errorf("newGameRecording: could not refresh stats frame: %w", err)
 	}
 
-	for i, sf := range statsFrame {
-		if i == len(statsFrame)-1 {
-			submitGameInput.TimerSlice = append(submitGameInput.TimerSlice, c.dd.GetTime())
-		} else {
-			submitGameInput.TimerSlice = append(submitGameInput.TimerSlice, c.dd.GetStartingTime()+float32(i))
+	for _, sf := range statsFrame {
+		perEnemyAliveCount := make([]int32, len(sf.PerEnemyAliveCount))
+		for i := range sf.PerEnemyAliveCount {
+			perEnemyAliveCount[i] = int32(sf.PerEnemyAliveCount[i])
 		}
-		submitGameInput.TotalGemsSlice = append(submitGameInput.TotalGemsSlice, sf.TotalGems)
-		submitGameInput.HomingSlice = append(submitGameInput.HomingSlice, sf.HomingDaggers)
-		submitGameInput.DaggersFiredSlice = append(submitGameInput.DaggersFiredSlice, sf.DaggersFired)
-		submitGameInput.DaggersHitSlice = append(submitGameInput.DaggersHitSlice, sf.DaggersHit)
-		submitGameInput.EnemiesAliveSlice = append(submitGameInput.EnemiesAliveSlice, sf.EnemiesAlive)
-		submitGameInput.EnemiesKilledSlice = append(submitGameInput.EnemiesKilledSlice, sf.Kills)
+		perEnemyKillCount := make([]int32, len(sf.PerEnemyKillCount))
+		for i := range sf.PerEnemyKillCount {
+			perEnemyKillCount[i] = int32(sf.PerEnemyKillCount[i])
+		}
+		submitGameRequest.Stats = append(submitGameRequest.Stats, &pb.StatFrame{
+			GemsCollected:      sf.GemsCollected,
+			Kills:              sf.Kills,
+			DaggersFired:       sf.DaggersFired,
+			DaggersHit:         sf.DaggersHit,
+			EnemiesAlive:       sf.EnemiesAlive,
+			LevelGems:          sf.LevelGems,
+			HomingDaggers:      sf.HomingDaggers,
+			GemsDespawned:      sf.GemsDespawned,
+			GemsEaten:          sf.GemsEaten,
+			TotalGems:          sf.TotalGems,
+			DaggersEaten:       sf.DaggersEaten,
+			PerEnemyAliveCount: perEnemyAliveCount,
+			PerEnemyKillCount:  perEnemyKillCount,
+		})
 	}
 
-	lastFrame := statsFrame[len(statsFrame)-1]
+	lastFrame := submitGameRequest.Stats[len(statsFrame)-1]
 
-	submitGameInput.TotalGems = lastFrame.TotalGems
-	submitGameInput.Homing = lastFrame.HomingDaggers
+	submitGameRequest.GemsCollected = lastFrame.GemsCollected
+	submitGameRequest.Kills = lastFrame.Kills
+	submitGameRequest.DaggersFired = lastFrame.DaggersFired
+	submitGameRequest.DaggersHit = lastFrame.DaggersHit
+	submitGameRequest.EnemiesAlive = lastFrame.EnemiesAlive
+	submitGameRequest.LevelGems = lastFrame.LevelGems
+	submitGameRequest.HomingDaggers = lastFrame.HomingDaggers
+	submitGameRequest.GemsDespawned = lastFrame.GemsCollected
+	submitGameRequest.GemsEaten = lastFrame.GemsEaten
+	submitGameRequest.TotalGems = lastFrame.TotalGems
+	submitGameRequest.DaggersEaten = lastFrame.DaggersEaten
+	submitGameRequest.PerEnemyAliveCount = lastFrame.PerEnemyAliveCount
+	submitGameRequest.PerEnemyKillcount = lastFrame.PerEnemyKillCount
+	submitGameRequest.Time = c.dd.GetTimeMax()
 
-	return &submitGameInput, nil
-}
-
-func (c *Client) appendGameState(gameRecording *api.SubmitGameInput) {
-	gameRecording.TimerSlice = append(gameRecording.TimerSlice, c.dd.GetTime())
-	gameRecording.TotalGemsSlice = append(gameRecording.TotalGemsSlice, c.dd.GetTotalGems())
-	gameRecording.HomingSlice = append(gameRecording.HomingSlice, c.dd.GetHomingDaggers())
-	gameRecording.DaggersFiredSlice = append(gameRecording.DaggersFiredSlice, c.dd.GetDaggersFired())
-	gameRecording.DaggersHitSlice = append(gameRecording.DaggersHitSlice, c.dd.GetDaggersHit())
-	gameRecording.EnemiesAliveSlice = append(gameRecording.EnemiesAliveSlice, c.dd.GetEnemiesAlive())
-	gameRecording.EnemiesKilledSlice = append(gameRecording.EnemiesKilledSlice, c.dd.GetKills())
+	return &submitGameRequest, nil
 }
 
 func (c *Client) runUI() {
@@ -286,7 +275,7 @@ func (c *Client) runUI() {
 
 func (c *Client) clearUIData() {
 	c.uiData.PlayerName = ""
-	c.uiData.Recording = false
+	c.uiData.Recording = consoleui.StatusNotRecording
 	c.uiData.Timer = 0.0
 	c.uiData.DaggersHit = 0
 	c.uiData.DaggersFired = 0
@@ -295,6 +284,8 @@ func (c *Client) clearUIData() {
 	c.uiData.Homing = 0
 	c.uiData.EnemiesAlive = 0
 	c.uiData.EnemiesKilled = 0
+	c.uiData.GemsDespawned = 0
+	c.uiData.GemsEaten = 0
 	c.uiData.DeathType = 0
 }
 
@@ -308,20 +299,28 @@ func (c *Client) populateUIData() {
 	c.uiData.LastGameID = c.lastSubmittedGameID
 	status := c.dd.GetStatus()
 	if status == devildaggers.StatusPlaying || status == devildaggers.StatusOtherReplay || status == devildaggers.StatusOwnReplayFromLastRun || status == devildaggers.StatusOwnReplayFromLeaderboard {
-		c.uiData.Recording = true
+		c.uiData.Recording = consoleui.StatusRecording
+		if c.statsSent {
+			c.uiData.Recording = consoleui.StatusGameSubmitted
+		}
 		c.uiData.Timer = c.dd.GetTime()
 		c.uiData.DaggersHit = c.dd.GetDaggersHit()
 		c.uiData.DaggersFired = c.dd.GetDaggersFired()
 		c.uiData.Accuracy = c.dd.GetAccuracy()
-		c.uiData.TotalGems = c.dd.GetTotalGems()
+		c.uiData.TotalGems = c.dd.GetGemsCollected()
 		c.uiData.Homing = c.dd.GetHomingDaggers()
 		c.uiData.EnemiesAlive = c.dd.GetEnemiesAlive()
 		c.uiData.EnemiesKilled = c.dd.GetKills()
+		c.uiData.GemsDespawned = c.dd.GetGemsDespawned()
+		c.uiData.GemsEaten = c.dd.GetGemsEaten()
 	} else {
+		c.uiData.Recording = consoleui.StatusNotRecording
 		if c.dd.GetStatus() == devildaggers.StatusDead {
+			if c.statsSent {
+				c.uiData.Recording = consoleui.StatusGameSubmitted
+			}
 			c.uiData.DeathType = c.dd.GetDeathType()
 		}
-		c.uiData.Recording = false
 	}
 }
 

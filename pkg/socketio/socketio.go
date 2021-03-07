@@ -2,7 +2,9 @@ package socketio
 
 import (
 	"fmt"
+	"log"
 	"net/url"
+	"os"
 
 	"github.com/wedeploy/gosocketio"
 	"github.com/wedeploy/gosocketio/websocket"
@@ -87,6 +89,7 @@ func (c *Client) Disconnect() error {
 	if err != nil {
 		return fmt.Errorf("Disconnect: error disconnecting: %w", err)
 	}
+	c.status = StatusDisconnected
 	return nil
 }
 
@@ -162,8 +165,15 @@ func (c *Client) SubmitLogin(playerID int) error {
 	return nil
 }
 
-func (c *Client) errorHandler(err error) {
-	fmt.Printf("errorHandler: %v\n", err)
+func (c *Client) errorHandler(inputErr error) {
+	f, err := os.OpenFile("error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+	log.Printf("%v\n", inputErr)
 	c.status = StatusDisconnected
 }
 

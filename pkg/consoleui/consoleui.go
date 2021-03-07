@@ -22,6 +22,12 @@ const (
 )
 
 const (
+	StatusNotRecording = iota
+	StatusRecording
+	StatusGameSubmitted
+)
+
+const (
 	OnlineStatusDisconnected = iota
 	OnlineStatusConnecting
 	OnlineStatusTimedOut
@@ -29,26 +35,27 @@ const (
 	OnlineStatusConnected
 )
 
-const logoString = `@@@@@@@   @@@@@@@    @@@@@@   @@@@@@@   @@@@@@   @@@@@@@   @@@@@@
-@@@@@@@@  @@@@@@@@  @@@@@@@   @@@@@@@  @@@@@@@@  @@@@@@@  @@@@@@@
-@@!  @@@  @@!  @@@  !@@         @@!    @@!  @@@    @@!    !@@
-!@!  @!@  !@!  @!@  !@!         !@!    !@!  @!@    !@!    !@!
-@!@  !@!  @!@  !@!  !!@@!!      @!!    @!@!@!@!    @!!    !!@@!!
-!@!  !!!  !@!  !!!   !!@!!!     !!!    !!!@!!!!    !!!     !!@!!!
-!!:  !!!  !!:  !!!       !:!    !!:    !!:  !!!    !!:         !:!
-:!:  !:!  :!:  !:!      !:!     :!:    :!:  !:!    :!:        !:!
- :::: ::   :::: ::  :::: ::      ::    ::   :::     ::    :::: ::
-:: :  :   :: :  :   :: : :       :      :   : :     :     :: : :`
+const logoString = `  ▓█████▄ ▓█████▄   ██████ ▄▄▄█████▓ ▄▄▄     ▄▄▄█████▓  ██████ 
+  ▒██▀ ██▌▒██▀ ██▌▒██    ▒ ▓  ██▒ ▓▒▒████▄   ▓  ██▒ ▓▒▒██    ▒ 
+  ░██   █▌░██   █▌░ ▓██▄   ▒ ▓██░ ▒░▒██  ▀█▄ ▒ ▓██░ ▒░░ ▓██▄   
+  ░▓█▄   ▌░▓█▄   ▌  ▒   ██▒░ ▓██▓ ░ ░██▄▄▄▄██░ ▓██▓ ░   ▒   ██▒
+  ░▒████▓ ░▒████▓ ▒██████▒▒  ▒██▒ ░  ▓█   ▓██▒ ▒██▒ ░ ▒██████▒▒
+   ▒▒▓  ▒  ▒▒▓  ▒ ▒ ▒▓▒ ▒ ░  ▒ ░░    ▒▒   ▓▒█░ ▒ ░░   ▒ ▒▓▒ ▒ ░
+   ░ ▒  ▒  ░ ▒  ▒ ░ ░▒  ░ ░    ░      ▒   ▒▒ ░   ░    ░ ░▒  ░ ░
+   ░ ░  ░  ░ ░  ░ ░  ░  ░    ░    ░   ░   ▒    ░      ░  ░  ░  
+     ░       ░          ░                 ░  ░              ░  
+            ░                                      ░           `
 
 type Data struct {
 	Host            string
 	PlayerName      string
 	Version         string
+	ValidVersion    bool
 	UpdateAvailable bool
 	MOTD            string
 	Status          int32
 	OnlineStatus    int
-	Recording       bool
+	Recording       int
 	Timer           float32
 	DaggersHit      int32
 	DaggersFired    int32
@@ -57,6 +64,8 @@ type Data struct {
 	Homing          int32
 	EnemiesAlive    int32
 	EnemiesKilled   int32
+	GemsDespawned   int32
+	GemsEaten       int32
 	DeathType       uint8
 	LastGameID      int
 }
@@ -166,7 +175,7 @@ func (cui *ConsoleUI) drawMenu() {
 	menu := ui.NewParagraph("[F10] Exit | [F12] Reset Config File")
 	menu.Border = false
 	menu.X = ui.TermWidth()/2 - 34
-	menu.Y = 21
+	menu.Y = 22
 	menu.Height = 1
 	menu.Width = len(menu.Text)
 
@@ -277,18 +286,22 @@ func (cui *ConsoleUI) drawOnlineStatus() {
 
 func (cui *ConsoleUI) drawRecording() {
 	recordingLabel := ui.NewParagraph("")
-	if cui.data.Recording {
-		recordingLabel.TextFgColor = ui.StringToAttribute("bold, green")
-		recordingLabel.Text = "  [[ Recording ]]  "
-	} else {
+	switch cui.data.Recording {
+	case StatusNotRecording:
 		recordingLabel.TextFgColor = ui.StringToAttribute("red")
-		recordingLabel.Text = "[[ Not recording ]]"
+		recordingLabel.Text = "[[ Not recording ]] "
+	case StatusRecording:
+		recordingLabel.TextFgColor = ui.StringToAttribute("bold, green")
+		recordingLabel.Text = "  [[ Recording ]]   "
+	case StatusGameSubmitted:
+		recordingLabel.TextFgColor = ui.StringToAttribute("bold, yellow")
+		recordingLabel.Text = "[[ Game Submitted ]]"
 	}
 	recordingLabel.Border = false
 	recordingLabel.X = ui.TermWidth()/2 - len(recordingLabel.Text)/2
 	recordingLabel.Y = 14
 	recordingLabel.Height = 1
-	recordingLabel.Width = 20
+	recordingLabel.Width = len(recordingLabel.Text)
 
 	ui.Render(recordingLabel)
 }
@@ -297,30 +310,32 @@ func (cui *ConsoleUI) drawLeftSideStats() {
 	timerString := fmt.Sprintf("In Game Timer: %.4fs", cui.data.Timer)
 	daggersHitString := fmt.Sprintf("Daggers Hit: %d", cui.data.DaggersHit)
 	daggersFiredString := fmt.Sprintf("Daggers Fired: %d", cui.data.DaggersFired)
-	accuracyString := fmt.Sprintf("Accuracy: %.2f%%", cui.data.Accuracy)
+	enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", cui.data.EnemiesAlive)
+	enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", cui.data.EnemiesKilled)
 
-	statsLeft := ui.NewParagraph(fmt.Sprintf("%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, accuracyString))
+	statsLeft := ui.NewParagraph(fmt.Sprintf("%v\n%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, enemiesAliveString, enemiesKilledString))
 	statsLeft.SetX(ui.TermWidth()/2 - 34)
 	statsLeft.SetY(15)
 	statsLeft.Border = false
 	statsLeft.Width = 34
-	statsLeft.Height = 5
+	statsLeft.Height = 6
 
 	ui.Render(statsLeft)
 }
 
 func (cui *ConsoleUI) drawRightSideStats() {
+	accuracyString := fmt.Sprintf("Accuracy: %.2f%%", cui.data.Accuracy)
 	gemsString := fmt.Sprintf("Gems: %d", cui.data.TotalGems)
 	homingString := fmt.Sprintf("Homing Daggers: %d", cui.data.Homing)
-	enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", cui.data.EnemiesAlive)
-	enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", cui.data.EnemiesKilled)
+	gemsDespawned := fmt.Sprintf("Gems Despawned: %d", cui.data.GemsDespawned)
+	gemsEaten := fmt.Sprintf("Gems Eaten: %d", cui.data.GemsEaten)
 
-	statsRight := ui.NewParagraph(fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n", gemsString, homingString, enemiesAliveString, enemiesKilledString))
+	statsRight := ui.NewParagraph(fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n%32v\n", accuracyString, gemsString, homingString, gemsDespawned, gemsEaten))
 	statsRight.SetX(ui.TermWidth() / 2)
 	statsRight.SetY(15)
 	statsRight.Border = false
 	statsRight.Width = 34
-	statsRight.Height = 5
+	statsRight.Height = 6
 
 	ui.Render(statsRight)
 }
@@ -333,7 +348,7 @@ func (cui *ConsoleUI) drawLastGameLabel() {
 
 	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)
 	lastGameLabel.SetX(ui.TermWidth()/2 - 34)
-	lastGameLabel.SetY(20)
+	lastGameLabel.SetY(21)
 	lastGameLabel.Border = false
 	lastGameLabel.Height = 1
 	lastGameLabel.Width = 66

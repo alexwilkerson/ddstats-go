@@ -50,7 +50,7 @@ const (
 	StatusOtherReplay
 )
 
-type dataBlock struct {
+type DataBlock struct {
 	DDStatsVersion       int32
 	PlayerID             int32
 	UserName             [32]byte
@@ -397,7 +397,7 @@ func (dd *DevilDaggers) GetReplayPlayerName() string {
 }
 
 func (dd *DevilDaggers) GetLevelHashMD5() string {
-	return fmt.Sprintf("%X", dd.dataBlock.LevelHashMD5)
+	return fmt.Sprintf("%x", dd.dataBlock.LevelHashMD5)
 }
 
 func (dd *DevilDaggers) GetTimeLvl2() float32 {
