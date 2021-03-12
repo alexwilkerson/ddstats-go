@@ -1,19 +1,22 @@
 package socketio
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"net/url"
-	"os"
+	"time"
 
 	"github.com/wedeploy/gosocketio"
 	"github.com/wedeploy/gosocketio/websocket"
 )
 
+const defaultTickRate = time.Second / 3
+
 const (
-	submitFuncName       = "submit"
-	statusUpdateFuncName = "status_update"
-	loginFuncName        = "login"
+	submitFuncName        = "submit"
+	gameSubmittedFuncName = "game_submitted"
+	statusUpdateFuncName  = "status_update"
+	loginFuncName         = "login"
 )
 
 const (
@@ -47,13 +50,14 @@ func New(hostURL string) (*Client, error) {
 	}
 
 	return &Client{
-		hostURL:   &u,
-		sioClient: &gosocketio.Client{},
+		hostURL: &u,
 	}, nil
 }
 
 func (c *Client) Connect(playerID int) error {
 	var err error
+
+	c.sioClient = &gosocketio.Client{}
 
 	c.status = StatusConnecting
 
@@ -85,6 +89,9 @@ func (c *Client) Connect(playerID int) error {
 }
 
 func (c *Client) Disconnect() error {
+	if c.sioClient == nil {
+		return nil
+	}
 	err := c.sioClient.Close()
 	if err != nil {
 		return fmt.Errorf("Disconnect: error disconnecting: %w", err)
@@ -98,51 +105,72 @@ func (c *Client) GetStatus() int {
 }
 
 type SubmissionData struct {
-	status           int32
-	playerID         int32
-	timer            float32
-	totalGems        int32
-	homing           int32
-	enemiesAlive     int32
-	enemiesKilled    int32
-	daggersHit       int32
-	daggersFired     int32
-	level2time       float32
-	level3time       float32
-	level4time       float32
-	isReplay         bool
-	deathType        int32
-	notifyPlayerBest bool
-	notifyAbove1000  bool
-	deathScreenSent  bool
+	PlayerID         int32
+	Timer            float32
+	TotalGems        int32
+	Homing           int32
+	EnemiesAlive     int32
+	EnemiesKilled    int32
+	DaggersHit       int32
+	DaggersFired     int32
+	Level2time       float32
+	Level3time       float32
+	Level4time       float32
+	IsReplay         bool
+	DeathType        int32
+	NotifyPlayerBest bool
+	NotifyAbove1000  bool
+	DeathScreenSent  bool
 }
 
-func (c *Client) Submit(submissionData *SubmissionData) error {
+func (c *Client) SubmitStats(submissionData *SubmissionData) error {
+	if c.sioClient == nil {
+		return errors.New("SubmitStats: sioClient is nil")
+	}
 	err := c.sioClient.Emit(
 		submitFuncName,
-		submissionData.playerID,
-		submissionData.timer,
-		submissionData.totalGems,
-		submissionData.homing,
-		submissionData.enemiesAlive,
-		submissionData.enemiesKilled,
-		submissionData.daggersHit,
-		submissionData.daggersFired,
-		submissionData.level2time,
-		submissionData.level3time,
-		submissionData.level4time,
-		submissionData.isReplay,
-		submissionData.deathType,
-		submissionData.notifyPlayerBest,
-		submissionData.notifyAbove1000,
+		submissionData.PlayerID,
+		submissionData.Timer,
+		submissionData.TotalGems,
+		submissionData.Homing,
+		submissionData.EnemiesAlive,
+		submissionData.EnemiesKilled,
+		submissionData.DaggersHit,
+		submissionData.DaggersFired,
+		submissionData.Level2time,
+		submissionData.Level3time,
+		submissionData.Level4time,
+		submissionData.IsReplay,
+		submissionData.DeathType,
+		submissionData.NotifyPlayerBest,
+		submissionData.NotifyAbove1000,
 	)
 	if err != nil {
-		return fmt.Errorf("Submit: error submitting: %w", err)
+		return fmt.Errorf("SubmitStats: error submitting: %w", err)
+	}
+	return nil
+}
+
+func (c *Client) SubmitGame(gameID int, notifyPlayerBest, notifyAbove1000 bool) error {
+	if c.sioClient == nil {
+		return errors.New("SubmitGame: sioClient is nil")
+	}
+	err := c.sioClient.Emit(
+		gameSubmittedFuncName,
+		gameID,
+		notifyPlayerBest,
+		notifyAbove1000,
+	)
+	if err != nil {
+		return fmt.Errorf("SubmitGame: error sending 'game_submitted' func via sio: %w", err)
 	}
 	return nil
 }
 
 func (c *Client) SubmitStatusUpdate(playerID int, status int) error {
+	if c.sioClient == nil {
+		return errors.New("SubmitStatusUpdate: sioClient is nil")
+	}
 	err := c.sioClient.Emit(
 		statusUpdateFuncName,
 		playerID,
@@ -155,6 +183,9 @@ func (c *Client) SubmitStatusUpdate(playerID int, status int) error {
 }
 
 func (c *Client) SubmitLogin(playerID int) error {
+	if c.sioClient == nil {
+		return errors.New("SubmitLogin: sioClient is nil")
+	}
 	err := c.sioClient.Emit(
 		loginFuncName,
 		playerID,
@@ -166,14 +197,14 @@ func (c *Client) SubmitLogin(playerID int) error {
 }
 
 func (c *Client) errorHandler(inputErr error) {
-	f, err := os.OpenFile("error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return
-	}
-	defer f.Close()
+	// f, err := os.OpenFile("error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	// if err != nil {
+	// 	return
+	// }
+	// defer f.Close()
 
-	log.SetOutput(f)
-	log.Printf("%v\n", inputErr)
+	// log.SetOutput(f)
+	// log.Printf("%v\n", inputErr)
 	c.status = StatusDisconnected
 }
 

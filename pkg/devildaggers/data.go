@@ -241,7 +241,7 @@ func (dd *DevilDaggers) GetTotalGems() int32 {
 }
 
 func (dd *DevilDaggers) GetDaggersEaten() int32 {
-	return dd.dataBlock.TotalGems
+	return dd.dataBlock.DaggersEaten
 }
 
 func (dd *DevilDaggers) GetSkull1Alive() int16 {

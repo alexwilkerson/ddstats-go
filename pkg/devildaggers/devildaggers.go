@@ -61,7 +61,7 @@ func (dd *DevilDaggers) StartPersistentConnection(errors chan error) {
 				if !dd.connected {
 					connected, err := dd.Connect()
 					if err != nil {
-						errors <- fmt.Errorf("StartPersistentConnection: could not connect to devil daggers: %w", err)
+						// errors <- fmt.Errorf("StartPersistentConnection: could not connect to devil daggers: %w", err)
 						continue
 					}
 					dd.connected = connected

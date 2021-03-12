@@ -64,6 +64,7 @@ get_motd = true
 check_for_updates = true
 offline_mode = false
 auto_clipboard_game = false
+# this doesn't really work now because of the update
 host = "https://ddstats.com"
 
 # These options are for whether ddstats sends your live game stats to ddstats.com.
@@ -82,11 +83,11 @@ non_default_spawnsets = true
 [submit]
 stats = true
 replay_stats = true
-non_default_spawnsets = true
+non_default_spawnsets = false
 
 # By default, if your game goes above 1000 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
 # "notify_above_1000" notifies when your score goes above 1000 seconds.
 # "notify_player_best" notifies when your score goes above your current high score.
 [discord]
-notify_above_1000 = true
+notify_above_1100 = true
 notify_player_best = true`

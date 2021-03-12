@@ -12,14 +12,14 @@ import (
 
 const (
 	// version must be in "X.X.X" order.
-	version        = "0.6.2"
+	version        = "0.6.5"
 	consoleTitle   = "ddstats v" + version
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 	grpcAddr       = "172.104.11.117:80"
 )
 
 func main() {
-	client, err := client.New(version, grpcAddr)
+	client, err := client.New(version, grpcAddr, v3survivalHash)
 	if err != nil {
 		if err := logError(err); err != nil {
 			log.Fatal(err)

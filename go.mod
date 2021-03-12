@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/TheTitanrain/w32 v0.0.0-20200114052255-2654d97dbd3d
-	github.com/alexwilkerson/ddstats-server v0.6.5
+	github.com/alexwilkerson/ddstats-server v0.6.6
 	github.com/atotto/clipboard v0.1.2
 	github.com/gizak/termui v0.0.0-20190118200331-b3075f731367
 	github.com/gorilla/websocket v1.4.2 // indirect

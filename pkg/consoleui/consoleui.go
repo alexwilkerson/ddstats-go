@@ -5,6 +5,7 @@ import (
 
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
+	"github.com/atotto/clipboard"
 	ui "github.com/gizak/termui"
 )
 
@@ -60,12 +61,14 @@ type Data struct {
 	DaggersHit      int32
 	DaggersFired    int32
 	Accuracy        float32
-	TotalGems       int32
+	GemsCollected   int32
 	Homing          int32
 	EnemiesAlive    int32
 	EnemiesKilled   int32
 	GemsDespawned   int32
 	GemsEaten       int32
+	TotalGems       int32
+	DaggersEaten    int32
 	DeathType       uint8
 	LastGameID      int
 }
@@ -123,16 +126,15 @@ func (cui *ConsoleUI) PollEvents() {
 		case "<f11>":
 			config.WriteDefaultConfigFile()
 		case "<MouseLeft>":
-			copyGameURLToClipboard()
+			cui.copyGameURLToClipboard()
 		}
 	}
 }
 
-func copyGameURLToClipboard() {
-	// if lastGameURL[:4] == "https" {
-	// 	lastGameURLCopyTime = time.Now()
-	// 	clipboard.WriteAll(lastGameURL)
-	// }
+func (cui *ConsoleUI) copyGameURLToClipboard() {
+	if cui.data.LastGameID != 0 {
+		clipboard.WriteAll(fmt.Sprintf("%s/game/%d", cui.data.Host, cui.data.LastGameID))
+	}
 }
 
 func (cui *ConsoleUI) drawLogo() {
@@ -175,7 +177,7 @@ func (cui *ConsoleUI) drawMenu() {
 	menu := ui.NewParagraph("[F10] Exit | [F12] Reset Config File")
 	menu.Border = false
 	menu.X = ui.TermWidth()/2 - 34
-	menu.Y = 22
+	menu.Y = 23
 	menu.Height = 1
 	menu.Width = len(menu.Text)
 
@@ -307,35 +309,37 @@ func (cui *ConsoleUI) drawRecording() {
 }
 
 func (cui *ConsoleUI) drawLeftSideStats() {
-	timerString := fmt.Sprintf("In Game Timer: %.4fs", cui.data.Timer)
-	daggersHitString := fmt.Sprintf("Daggers Hit: %d", cui.data.DaggersHit)
-	daggersFiredString := fmt.Sprintf("Daggers Fired: %d", cui.data.DaggersFired)
-	enemiesAliveString := fmt.Sprintf("Enemies Alive: %d", cui.data.EnemiesAlive)
+	timerString := fmt.Sprintf("In Game Timer:  %.4fs", cui.data.Timer)
+	daggersHitString := fmt.Sprintf("Daggers Hit:    %d", cui.data.DaggersHit)
+	daggersFiredString := fmt.Sprintf("Daggers Fired:  %d", cui.data.DaggersFired)
+	enemiesAliveString := fmt.Sprintf("Enemies Alive:  %d", cui.data.EnemiesAlive)
 	enemiesKilledString := fmt.Sprintf("Enemies Killed: %d", cui.data.EnemiesKilled)
+	accuracyString := fmt.Sprintf("Accuracy:       %.2f%%", cui.data.Accuracy)
 
-	statsLeft := ui.NewParagraph(fmt.Sprintf("%v\n%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, enemiesAliveString, enemiesKilledString))
+	statsLeft := ui.NewParagraph(fmt.Sprintf("%v\n%v\n%v\n%v\n%v\n%v\n", timerString, daggersHitString, daggersFiredString, enemiesAliveString, enemiesKilledString, accuracyString))
 	statsLeft.SetX(ui.TermWidth()/2 - 34)
 	statsLeft.SetY(15)
 	statsLeft.Border = false
 	statsLeft.Width = 34
-	statsLeft.Height = 6
+	statsLeft.Height = 7
 
 	ui.Render(statsLeft)
 }
 
 func (cui *ConsoleUI) drawRightSideStats() {
-	accuracyString := fmt.Sprintf("Accuracy: %.2f%%", cui.data.Accuracy)
-	gemsString := fmt.Sprintf("Gems: %d", cui.data.TotalGems)
-	homingString := fmt.Sprintf("Homing Daggers: %d", cui.data.Homing)
+	gemsString := fmt.Sprintf("Gems Collected: %d", cui.data.GemsCollected)
 	gemsDespawned := fmt.Sprintf("Gems Despawned: %d", cui.data.GemsDespawned)
 	gemsEaten := fmt.Sprintf("Gems Eaten: %d", cui.data.GemsEaten)
+	totalGems := fmt.Sprintf("Total Gems: %d", cui.data.TotalGems)
+	homingString := fmt.Sprintf("Homing Daggers: %d", cui.data.Homing)
+	daggersEaten := fmt.Sprintf("Daggers Eaten: %d", cui.data.DaggersEaten)
 
-	statsRight := ui.NewParagraph(fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n%32v\n", accuracyString, gemsString, homingString, gemsDespawned, gemsEaten))
+	statsRight := ui.NewParagraph(fmt.Sprintf("%32v\n%32v\n%32v\n%32v\n%32v\n%32v\n", gemsString, gemsDespawned, gemsEaten, totalGems, homingString, daggersEaten))
 	statsRight.SetX(ui.TermWidth() / 2)
 	statsRight.SetY(15)
 	statsRight.Border = false
 	statsRight.Width = 34
-	statsRight.Height = 6
+	statsRight.Height = 7
 
 	ui.Render(statsRight)
 }
@@ -348,7 +352,7 @@ func (cui *ConsoleUI) drawLastGameLabel() {
 
 	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)
 	lastGameLabel.SetX(ui.TermWidth()/2 - 34)
-	lastGameLabel.SetY(21)
+	lastGameLabel.SetY(22)
 	lastGameLabel.Border = false
 	lastGameLabel.Height = 1
 	lastGameLabel.Width = 66

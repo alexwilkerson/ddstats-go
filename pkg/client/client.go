@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,18 +9,21 @@ import (
 	"github.com/alexwilkerson/ddstats-go/pkg/consoleui"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
 	"github.com/alexwilkerson/ddstats-go/pkg/grpcclient"
+	"github.com/alexwilkerson/ddstats-go/pkg/socketio"
 	pb "github.com/alexwilkerson/ddstats-server/gamesubmission"
 	"github.com/atotto/clipboard"
 	ui "github.com/gizak/termui"
 )
 
 const (
-	defaultTickRate   = time.Second / 36
-	defaultUITickRate = time.Second / 2
+	defaultTickRate    = time.Second / 36
+	defaultUITickRate  = time.Second / 2
+	defaultSIOTickRate = time.Second / 3
 )
 
 type Client struct {
 	version             string
+	v3SurvivalHash      string
 	tickRate            time.Duration
 	uiTickRate          time.Duration
 	cfg                 *config.Config
@@ -27,6 +31,7 @@ type Client struct {
 	uiData              *consoleui.Data
 	dd                  *devildaggers.DevilDaggers
 	grpcClient          *grpcclient.Client
+	sioClient           *socketio.Client
 	loggedIn            bool
 	statsSent           bool
 	lastSubmittedGameID int
@@ -34,7 +39,7 @@ type Client struct {
 	done                chan struct{}
 }
 
-func New(version string, grpcAddr string) (*Client, error) {
+func New(version string, grpcAddr, v3SurvivalHash string) (*Client, error) {
 	cfg, err := config.New()
 	if err != nil {
 		return nil, fmt.Errorf("New: unable to get config: %w", err)
@@ -45,18 +50,40 @@ func New(version string, grpcAddr string) (*Client, error) {
 		return nil, fmt.Errorf("New: unable to initialize grpc client: %w", err)
 	}
 
-	clientConnectReply, err := grpcClient.ClientConnect(version)
+	motd, updateAvailable, validVersion := "Offline Mode", false, false
+
+	if !cfg.OfflineMode && (cfg.GetMOTD || cfg.CheckForUpdates) {
+		clientConnectReply, err := grpcClient.ClientConnect(version)
+		if err != nil {
+			return nil, fmt.Errorf("New: unable to connect to server: %w", err)
+		}
+		if cfg.GetMOTD {
+			motd = clientConnectReply.GetMotd()
+		} else {
+			motd = ""
+		}
+		if cfg.CheckForUpdates {
+			updateAvailable = clientConnectReply.UpdateAvailable
+		}
+		validVersion = clientConnectReply.ValidVersion
+
+		if !validVersion {
+			return nil, errors.New("invalid version: tell mother")
+		}
+	}
+
+	sioClient, err := socketio.New(cfg.Host)
 	if err != nil {
-		return nil, fmt.Errorf("New: unable to connect to server: %w", err)
+		return nil, fmt.Errorf("New: unable to connect to socketio: %w", err)
 	}
 
 	// TODO: handle invalid versions
 
 	uiData := consoleui.Data{
 		Host:            cfg.Host,
-		MOTD:            clientConnectReply.GetMotd(),
-		UpdateAvailable: clientConnectReply.UpdateAvailable,
-		ValidVersion:    clientConnectReply.ValidVersion,
+		MOTD:            motd,
+		UpdateAvailable: updateAvailable,
+		ValidVersion:    validVersion,
 		Version:         version,
 	}
 
@@ -68,17 +95,19 @@ func New(version string, grpcAddr string) (*Client, error) {
 	dd := devildaggers.New()
 
 	return &Client{
-		version:    version,
-		tickRate:   defaultTickRate,
-		uiTickRate: defaultUITickRate,
-		cfg:        cfg,
-		ui:         ui,
-		uiData:     &uiData,
-		dd:         dd,
-		grpcClient: grpcClient,
-		statsSent:  true, // this is true to prevent stats being sent when game is opened while on death screen
-		errChan:    make(chan error),
-		done:       make(chan struct{}),
+		version:        version,
+		v3SurvivalHash: v3SurvivalHash,
+		tickRate:       defaultTickRate,
+		uiTickRate:     defaultUITickRate,
+		cfg:            cfg,
+		ui:             ui,
+		uiData:         &uiData,
+		dd:             dd,
+		grpcClient:     grpcClient,
+		sioClient:      sioClient,
+		statsSent:      true, // this is true to prevent stats being sent when game is opened while on death screen
+		errChan:        make(chan error),
+		done:           make(chan struct{}),
 	}, nil
 }
 
@@ -115,18 +144,100 @@ func (c *Client) run() {
 	c.dd.StartPersistentConnection(c.errChan)
 	go c.runDD()
 	go c.runUI()
+	if !c.cfg.OfflineMode {
+		go c.runSIO()
+	}
 }
 
-func (c *Client) runDD2() {
+func (c *Client) runSIO() {
+	defer func() {
+		if c.sioClient.GetStatus() != socketio.StatusDisconnected {
+			err := c.sioClient.Disconnect()
+			if err != nil {
+				c.errChan <- fmt.Errorf("runSIO: error disconnecting from sio: %w", err)
+				return
+			}
+		}
+	}()
 	for {
 		select {
-		case <-time.After(c.tickRate):
-			if !c.dd.CheckConnection() {
-				c.clearUIData()
-				c.uiData.Status = consoleui.StatusDevilDaggersNotFound
-				continue
+		case <-time.After(defaultSIOTickRate):
+			if c.dd.CheckConnection() {
+				if c.sioClient.GetStatus() != socketio.StatusLoggedIn {
+					if c.dd.GetPlayerID() != 0 {
+						err := c.sioClient.Connect(int(c.dd.GetPlayerID()))
+						if err != nil {
+							c.errChan <- fmt.Errorf("runSIO: error connecting to sio: %w", err)
+							return
+						}
+					}
+				} else {
+					if c.dd.GetIsInGame() || c.dd.GetStatus() == devildaggers.StatusDead {
+						if (c.cfg.Stream.Stats && !c.dd.GetIsReplay()) ||
+							(c.cfg.Stream.ReplayStats && c.dd.GetIsReplay()) {
+							if (c.dd.GetLevelHashMD5() == c.v3SurvivalHash) ||
+								(!c.cfg.Stream.NonDefaultSpawnsets && c.dd.GetLevelHashMD5() != c.v3SurvivalHash) {
+								var deathType int32 = -2
+								if c.dd.GetStatus() == devildaggers.StatusPlaying {
+									deathType = -1
+								} else if c.dd.GetStatus() == devildaggers.StatusDead {
+									deathType = int32(c.dd.GetDeathType())
+								}
+
+								err := c.sioClient.SubmitStats(&socketio.SubmissionData{
+									PlayerID:         c.dd.GetPlayerID(),
+									Timer:            c.dd.GetTime(),
+									TotalGems:        c.dd.GetGemsCollected(),
+									Homing:           c.dd.GetHomingDaggers(),
+									EnemiesAlive:     c.dd.GetEnemiesAlive(),
+									EnemiesKilled:    c.dd.GetKills(),
+									DaggersHit:       c.dd.GetDaggersHit(),
+									DaggersFired:     c.dd.GetDaggersFired(),
+									Level2time:       c.dd.GetTimeLvl2(),
+									Level3time:       c.dd.GetTimeLvl3(),
+									Level4time:       c.dd.GetTimeLvl4(),
+									IsReplay:         c.dd.GetIsReplay(),
+									DeathType:        deathType,
+									NotifyPlayerBest: c.cfg.Discord.NotifyPlayerBest,
+									NotifyAbove1000:  c.cfg.Discord.NotifyAbove1100,
+								})
+								if err != nil {
+									c.errChan <- fmt.Errorf("runSIO: error sending stats via sio: %w", err)
+									return
+								}
+							}
+						}
+					} else {
+						var sioStatus int
+						switch c.dd.GetStatus() {
+						case devildaggers.StatusTitle, devildaggers.StatusMenu:
+							sioStatus = 4
+						case devildaggers.StatusLobby:
+							sioStatus = 5
+						case devildaggers.StatusPlaying:
+							sioStatus = 2
+						case devildaggers.StatusDead:
+							sioStatus = 6
+						case devildaggers.StatusOwnReplayFromLastRun, devildaggers.StatusOwnReplayFromLeaderboard, devildaggers.StatusOtherReplay:
+							sioStatus = 3
+						}
+
+						err := c.sioClient.SubmitStatusUpdate(int(c.dd.GetPlayerID()), sioStatus)
+						if err != nil {
+							c.errChan <- fmt.Errorf("runSIO: error sending status update via sio: %w", err)
+							return
+						}
+					}
+				}
+			} else {
+				if c.sioClient.GetStatus() == socketio.StatusLoggedIn {
+					err := c.sioClient.Disconnect()
+					if err != nil {
+						c.errChan <- fmt.Errorf("runSIO: error disconnecting from sio: %w", err)
+						return
+					}
+				}
 			}
-			c.populateUIData()
 		case <-c.done:
 			return
 		}
@@ -141,6 +252,7 @@ func (c *Client) runDD() {
 			if !c.dd.CheckConnection() {
 				c.clearUIData()
 				c.uiData.Status = consoleui.StatusDevilDaggersNotFound
+				c.uiData.OnlineStatus = c.sioClient.GetStatus()
 				continue
 			}
 
@@ -155,19 +267,41 @@ func (c *Client) runDD() {
 				c.statsSent = false
 			}
 
-			if c.dd.GetStatsFinishedLoading() && !c.statsSent {
-				if newStatus == devildaggers.StatusDead || newStatus == devildaggers.StatusOtherReplay || newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
-					// send stats
-					submitGameRequest, err := c.compileGameRequest()
-					if err != nil {
-						c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
+			if !c.cfg.OfflineMode {
+				if c.dd.GetStatsFinishedLoading() && !c.statsSent {
+					if newStatus == devildaggers.StatusDead || newStatus == devildaggers.StatusOtherReplay || newStatus == devildaggers.StatusOwnReplayFromLeaderboard {
+						// send stats
+						submitGameRequest, err := c.compileGameRequest()
+						if err != nil {
+							c.errChan <- fmt.Errorf("runGameCapture: could not compile game recording: %w", err)
+							return
+						}
+						gameID, err := c.grpcClient.SubmitGame(submitGameRequest)
+						if err != nil {
+							c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
+							return
+						}
+						c.lastSubmittedGameID = gameID
+						c.statsSent = true
+
+						if c.cfg.AutoClipboardGame {
+							c.copyGameURLToClipboard()
+						}
+
+						if (c.cfg.Submit.Stats && !c.dd.GetIsReplay()) ||
+							(c.cfg.Submit.ReplayStats && c.dd.GetIsReplay()) {
+							if (c.dd.GetLevelHashMD5() == c.v3SurvivalHash) ||
+								(!c.cfg.Submit.NonDefaultSpawnsets && c.dd.GetLevelHashMD5() != c.v3SurvivalHash) {
+								if c.sioClient.GetStatus() == socketio.StatusLoggedIn {
+									err = c.sioClient.SubmitGame(gameID, c.cfg.Discord.NotifyPlayerBest, c.cfg.Discord.NotifyAbove1100)
+									if err != nil {
+										c.errChan <- fmt.Errorf("runGameCapture: error submitting game to sio: %w", err)
+										return
+									}
+								}
+							}
+						}
 					}
-					gameID, err := c.grpcClient.SubmitGame(submitGameRequest)
-					if err != nil {
-						c.errChan <- fmt.Errorf("runGameCapture: error submitting game to server: %w", err)
-					}
-					c.lastSubmittedGameID = gameID
-					c.statsSent = true
 				}
 			}
 
@@ -190,9 +324,9 @@ func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
 		PlayerID:             playerID,
 		PlayerName:           c.dd.GetPlayerName(),
 		LevelHashMD5:         c.dd.GetLevelHashMD5(),
-		TimeLvll2:            c.dd.GetTimeLvl2(),
-		TimeLvll3:            c.dd.GetTimeLvl3(),
-		TimeLvll4:            c.dd.GetTimeLvl4(),
+		TimeLvl2:             c.dd.GetTimeLvl2(),
+		TimeLvl3:             c.dd.GetTimeLvl3(),
+		TimeLvl4:             c.dd.GetTimeLvl4(),
 		TimeLeviDown:         c.dd.GetLeviathanDownTime(),
 		TimeOrbDown:          c.dd.GetOrbDownTime(),
 		EnemiesAliveMax:      c.dd.GetEnemiesAliveMax(),
@@ -291,6 +425,7 @@ func (c *Client) clearUIData() {
 
 func (c *Client) populateUIData() {
 	c.uiData.Status = c.dd.GetStatus()
+	c.uiData.OnlineStatus = c.sioClient.GetStatus()
 	c.uiData.PlayerName = c.dd.GetPlayerName()
 	if c.uiData.PlayerName == "" {
 		c.uiData.Status = consoleui.StatusConnecting
@@ -307,12 +442,14 @@ func (c *Client) populateUIData() {
 		c.uiData.DaggersHit = c.dd.GetDaggersHit()
 		c.uiData.DaggersFired = c.dd.GetDaggersFired()
 		c.uiData.Accuracy = c.dd.GetAccuracy()
-		c.uiData.TotalGems = c.dd.GetGemsCollected()
+		c.uiData.GemsCollected = c.dd.GetGemsCollected()
 		c.uiData.Homing = c.dd.GetHomingDaggers()
 		c.uiData.EnemiesAlive = c.dd.GetEnemiesAlive()
 		c.uiData.EnemiesKilled = c.dd.GetKills()
+		c.uiData.TotalGems = c.dd.GetTotalGems()
 		c.uiData.GemsDespawned = c.dd.GetGemsDespawned()
 		c.uiData.GemsEaten = c.dd.GetGemsEaten()
+		c.uiData.DaggersEaten = c.dd.GetDaggersEaten()
 	} else {
 		c.uiData.Recording = consoleui.StatusNotRecording
 		if c.dd.GetStatus() == devildaggers.StatusDead {
