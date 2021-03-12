@@ -1,6 +1,44 @@
-package main
+package config
 
-type TomlConfig struct {
+import (
+	"fmt"
+	"io/ioutil"
+
+	"github.com/BurntSushi/toml"
+)
+
+func New() (*Config, error) {
+	config := Config{
+		SquirrelMode:      false,
+		GetMOTD:           true,
+		CheckForUpdates:   true,
+		OfflineMode:       false,
+		AutoClipboardGame: false,
+		Host:              "https://ddstats.com",
+		Stream: StreamConfig{
+			Stats:               true,
+			ReplayStats:         true,
+			NonDefaultSpawnsets: true,
+		},
+		Submit: SubmitConfig{
+			Stats:               true,
+			ReplayStats:         true,
+			NonDefaultSpawnsets: true,
+		},
+		Discord: DiscordConfig{
+			NotifyAbove1100:  true,
+			NotifyPlayerBest: true,
+		},
+	}
+
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
+type Config struct {
 	SquirrelMode      bool   `toml:"squirrel_mode"`
 	GetMOTD           bool   `toml:"get_motd"`
 	CheckForUpdates   bool   `toml:"check_for_updates"`
@@ -25,31 +63,8 @@ type SubmitConfig struct {
 }
 
 type DiscordConfig struct {
-	NotifyAbove1000  bool `toml:"notify_above_1000"`
+	NotifyAbove1100  bool `toml:"notify_above_1100"`
 	NotifyPlayerBest bool `toml:"notify_player_best"`
-}
-
-var config = TomlConfig{
-	SquirrelMode:      false,
-	GetMOTD:           true,
-	CheckForUpdates:   true,
-	OfflineMode:       false,
-	AutoClipboardGame: false,
-	Host:              "http://ddstats.com",
-	Stream: StreamConfig{
-		Stats:               true,
-		ReplayStats:         true,
-		NonDefaultSpawnsets: true,
-	},
-	Submit: SubmitConfig{
-		Stats:               true,
-		ReplayStats:         true,
-		NonDefaultSpawnsets: true,
-	},
-	Discord: DiscordConfig{
-		NotifyAbove1000:  true,
-		NotifyPlayerBest: true,
-	},
 }
 
 const defaultConfigFile = `# DDSTATS CONFIGURATION FILE.
@@ -84,9 +99,16 @@ stats = true
 replay_stats = true
 non_default_spawnsets = true
 
-# By default, if your game goes above 1000 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
+# By default, if your game goes above 1100 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
 # "notify_above_1000" notifies when your score goes above 1000 seconds.
 # "notify_player_best" notifies when your score goes above your current high score.
 [discord]
 notify_above_1000 = true
 notify_player_best = true`
+
+func WriteDefaultConfigFile() error {
+	if err := ioutil.WriteFile("config.toml", []byte(defaultConfigFile), 0644); err != nil {
+		return fmt.Errorf("WriteDefaultConfigFile: could not write default config file: %w", err)
+	}
+	return nil
+}
