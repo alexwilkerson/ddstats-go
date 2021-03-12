@@ -100,7 +100,7 @@ replay_stats = true
 non_default_spawnsets = true
 
 # By default, if your game goes above 1100 or if you beat your best time, the ddstats Discord Bot will notify the DevilDaggers.info and DD PALS discord channels. You can disable that feature here.
-# "notify_above_1100" notifies when your score goes above 1100 seconds.
+# "notify_above_1000" notifies when your score goes above 1000 seconds.
 # "notify_player_best" notifies when your score goes above your current high score.
 [discord]
 notify_above_1000 = true

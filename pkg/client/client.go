@@ -175,6 +175,7 @@ func (c *Client) runSIO() {
 					if c.dd.GetIsInGame() || c.dd.GetStatus() == devildaggers.StatusDead {
 						if (c.cfg.Stream.Stats && !c.dd.GetIsReplay()) ||
 							(c.cfg.Stream.ReplayStats && c.dd.GetIsReplay()) {
+							fmt.Println("f")
 							if (c.dd.GetLevelHashMD5() == c.v3SurvivalHash) ||
 								(!c.cfg.Stream.NonDefaultSpawnsets && c.dd.GetLevelHashMD5() != c.v3SurvivalHash) {
 								var deathType int32 = -2
