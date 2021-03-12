@@ -2,6 +2,7 @@ package consoleui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alexwilkerson/ddstats-go/pkg/config"
 	"github.com/alexwilkerson/ddstats-go/pkg/devildaggers"
@@ -74,7 +75,8 @@ type Data struct {
 }
 
 type ConsoleUI struct {
-	data *Data
+	data                *Data
+	LastGameURLCopyTime time.Time
 }
 
 func New(data *Data) (*ConsoleUI, error) {
@@ -348,6 +350,10 @@ func (cui *ConsoleUI) drawLastGameLabel() {
 	lastGameURL := "None."
 	if cui.data.LastGameID != 0 {
 		lastGameURL = fmt.Sprintf("%s/games/%d", cui.data.Host, cui.data.LastGameID)
+	}
+
+	if time.Since(cui.LastGameURLCopyTime).Seconds() < 1.5 {
+		lastGameURL = "(copied to clipboard)"
 	}
 
 	lastGameLabel := ui.NewParagraph("Last Submission: " + lastGameURL)

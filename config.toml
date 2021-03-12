@@ -9,7 +9,7 @@
 get_motd = true
 check_for_updates = true
 offline_mode = false
-auto_clipboard_game = true
+auto_clipboard_game = false
 # this doesn't really work now because of the update
 host = "https://ddstats.com"
 

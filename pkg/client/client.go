@@ -464,5 +464,6 @@ func (c *Client) populateUIData() {
 func (c *Client) copyGameURLToClipboard() {
 	if c.lastSubmittedGameID != 0 {
 		clipboard.WriteAll(fmt.Sprintf("%s/games/%d", c.cfg.Host, c.lastSubmittedGameID))
+		c.ui.LastGameURLCopyTime = time.Now()
 	}
 }
