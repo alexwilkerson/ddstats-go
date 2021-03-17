@@ -190,11 +190,11 @@ func (dd *DevilDaggers) GetPlayerName() string {
 }
 
 func (dd *DevilDaggers) GetTime() float32 {
-	return dd.dataBlock.Time
+	return dd.dataBlock.StartingTime + dd.dataBlock.Time
 }
 
 func (dd *DevilDaggers) GetGemsCollected() int32 {
-	return dd.dataBlock.GemsCollected
+	return dd.GetStartingGemOffset() + dd.dataBlock.GemsCollected
 }
 
 func (dd *DevilDaggers) GetKills() int32 {
@@ -237,7 +237,7 @@ func (dd *DevilDaggers) GetGemsEaten() int32 {
 }
 
 func (dd *DevilDaggers) GetTotalGems() int32 {
-	return dd.dataBlock.TotalGems
+	return dd.GetStartingGemOffset() + dd.dataBlock.TotalGems
 }
 
 func (dd *DevilDaggers) GetDaggersEaten() int32 {
@@ -429,7 +429,7 @@ func (dd *DevilDaggers) GetHomingMax() int32 {
 }
 
 func (dd *DevilDaggers) GetHomingMaxTime() float32 {
-	return dd.dataBlock.TimeHomingMax
+	return dd.dataBlock.StartingTime + dd.dataBlock.TimeHomingMax
 }
 
 func (dd *DevilDaggers) GetEnemiesAliveMax() int32 {
@@ -437,11 +437,11 @@ func (dd *DevilDaggers) GetEnemiesAliveMax() int32 {
 }
 
 func (dd *DevilDaggers) GetEnemiesAliveMaxTime() float32 {
-	return dd.dataBlock.TimeEnemiesAliveMax
+	return dd.dataBlock.StartingTime + dd.dataBlock.TimeEnemiesAliveMax
 }
 
 func (dd *DevilDaggers) GetTimeMax() float32 {
-	return dd.dataBlock.TimeMax
+	return dd.dataBlock.StartingTime + dd.dataBlock.TimeMax
 }
 
 func (dd *DevilDaggers) GetStatsFramesLoaded() int32 {
@@ -483,4 +483,18 @@ func byteArrayToString(a *[32]byte) string {
 		}
 	}
 	return string(a[:])
+}
+
+func (dd *DevilDaggers) GetStartingGemOffset() int32 {
+	switch dd.dataBlock.StartingHandLevel {
+	case 1:
+		return 0
+	case 2:
+		return 10
+	case 3:
+		return 70
+	case 4:
+		return 220
+	}
+	return 0
 }

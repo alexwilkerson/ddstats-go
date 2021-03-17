@@ -105,7 +105,6 @@ func New(version string, grpcAddr, v3SurvivalHash string) (*Client, error) {
 		dd:             dd,
 		grpcClient:     grpcClient,
 		sioClient:      sioClient,
-		statsSent:      true, // this is true to prevent stats being sent when game is opened while on death screen
 		errChan:        make(chan error),
 		done:           make(chan struct{}),
 	}, nil
@@ -175,7 +174,6 @@ func (c *Client) runSIO() {
 					if c.dd.GetIsInGame() || c.dd.GetStatus() == devildaggers.StatusDead {
 						if (c.cfg.Stream.Stats && !c.dd.GetIsReplay()) ||
 							(c.cfg.Stream.ReplayStats && c.dd.GetIsReplay()) {
-							fmt.Println("f")
 							if (c.dd.GetLevelHashMD5() == c.v3SurvivalHash) ||
 								(!c.cfg.Stream.NonDefaultSpawnsets && c.dd.GetLevelHashMD5() != c.v3SurvivalHash) {
 								var deathType int32 = -2
@@ -183,6 +181,14 @@ func (c *Client) runSIO() {
 									deathType = -1
 								} else if c.dd.GetStatus() == devildaggers.StatusDead {
 									deathType = int32(c.dd.GetDeathType())
+								}
+
+								notifyPlayerBest := c.cfg.Discord.NotifyPlayerBest
+								notifyAbove1000 := c.cfg.Discord.NotifyAbove1000
+
+								if c.dd.GetIsReplay() {
+									notifyPlayerBest = false
+									notifyAbove1000 = false
 								}
 
 								err := c.sioClient.SubmitStats(&socketio.SubmissionData{
@@ -199,8 +205,8 @@ func (c *Client) runSIO() {
 									Level4time:       c.dd.GetTimeLvl4(),
 									IsReplay:         c.dd.GetIsReplay(),
 									DeathType:        deathType,
-									NotifyPlayerBest: c.cfg.Discord.NotifyPlayerBest,
-									NotifyAbove1000:  c.cfg.Discord.NotifyAbove1100,
+									NotifyPlayerBest: notifyPlayerBest,
+									NotifyAbove1000:  notifyAbove1000,
 								})
 								if err != nil {
 									c.errChan <- fmt.Errorf("runSIO: error sending stats via sio: %w", err)
@@ -294,7 +300,13 @@ func (c *Client) runDD() {
 							if (c.dd.GetLevelHashMD5() == c.v3SurvivalHash) ||
 								(!c.cfg.Submit.NonDefaultSpawnsets && c.dd.GetLevelHashMD5() != c.v3SurvivalHash) {
 								if c.sioClient.GetStatus() == socketio.StatusLoggedIn {
-									err = c.sioClient.SubmitGame(gameID, c.cfg.Discord.NotifyPlayerBest, c.cfg.Discord.NotifyAbove1100)
+									notifyPlayerBest := c.cfg.Discord.NotifyPlayerBest
+									notifyAbove1000 := c.cfg.Discord.NotifyAbove1000
+									if c.dd.GetIsReplay() {
+										notifyPlayerBest = false
+										notifyAbove1000 = false
+									}
+									err = c.sioClient.SubmitGame(gameID, notifyPlayerBest, notifyAbove1000)
 									if err != nil {
 										c.errChan <- fmt.Errorf("runGameCapture: error submitting game to sio: %w", err)
 										return
@@ -345,6 +357,8 @@ func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
 		return nil, fmt.Errorf("newGameRecording: could not refresh stats frame: %w", err)
 	}
 
+	startingGemOffset := c.dd.GetStartingGemOffset()
+
 	for _, sf := range statsFrame {
 		perEnemyAliveCount := make([]int32, len(sf.PerEnemyAliveCount))
 		for i := range sf.PerEnemyAliveCount {
@@ -355,7 +369,7 @@ func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
 			perEnemyKillCount[i] = int32(sf.PerEnemyKillCount[i])
 		}
 		submitGameRequest.Stats = append(submitGameRequest.Stats, &pb.StatFrame{
-			GemsCollected:      sf.GemsCollected,
+			GemsCollected:      sf.GemsCollected + startingGemOffset,
 			Kills:              sf.Kills,
 			DaggersFired:       sf.DaggersFired,
 			DaggersHit:         sf.DaggersHit,
@@ -364,7 +378,7 @@ func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
 			HomingDaggers:      sf.HomingDaggers,
 			GemsDespawned:      sf.GemsDespawned,
 			GemsEaten:          sf.GemsEaten,
-			TotalGems:          sf.TotalGems,
+			TotalGems:          sf.TotalGems + startingGemOffset,
 			DaggersEaten:       sf.DaggersEaten,
 			PerEnemyAliveCount: perEnemyAliveCount,
 			PerEnemyKillCount:  perEnemyKillCount,

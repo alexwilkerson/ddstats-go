@@ -3,12 +3,12 @@
         "FileVersion": {
             "Major": 0,
             "Minor": 6,
-            "Patch": 6
+            "Patch": 8
         },
         "ProductVersion": {
             "Major": 0,
             "Minor": 6,
-            "Patch": 6
+            "Patch": 8
         },
         "FileFlagsMask": "3f",
         "FileFlags ": "00",
@@ -27,7 +27,7 @@
         "OriginalFilename": "ddstats.exe",
         "PrivateBuild": "",
         "ProductName": "ddstats",
-        "ProductVersion": "v0.6.6",
+        "ProductVersion": "v0.6.8",
         "SpecialBuild": ""
     },
     "VarFileInfo": {
