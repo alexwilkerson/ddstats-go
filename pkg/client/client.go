@@ -394,7 +394,7 @@ func (c *Client) compileGameRequest() (*pb.SubmitGameRequest, error) {
 	submitGameRequest.EnemiesAlive = lastFrame.EnemiesAlive
 	submitGameRequest.LevelGems = lastFrame.LevelGems
 	submitGameRequest.HomingDaggers = lastFrame.HomingDaggers
-	submitGameRequest.GemsDespawned = lastFrame.GemsCollected
+	submitGameRequest.GemsDespawned = lastFrame.GemsDespawned
 	submitGameRequest.GemsEaten = lastFrame.GemsEaten
 	submitGameRequest.TotalGems = lastFrame.TotalGems
 	submitGameRequest.DaggersEaten = lastFrame.DaggersEaten
