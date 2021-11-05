@@ -11,8 +11,6 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/TheTitanrain/w32 v0.0.0-20200114052255-2654d97dbd3d h1:2xp1BQbqcDDaikHnASWpVZRjibOxu7y9LhAv04whugI=
 github.com/TheTitanrain/w32 v0.0.0-20200114052255-2654d97dbd3d/go.mod h1:peYoMncQljjNS6tZwI9WVyQB3qZS6u79/N3mBOcnd3I=
-github.com/alexwilkerson/ddstats-server v0.6.5 h1:IjKnffJLACtKLHc06CHghqxJiH0Yu9CmHkABNK9HFcg=
-github.com/alexwilkerson/ddstats-server v0.6.5/go.mod h1:ZyxLt4djhK+JQA5AV+Hov40Q9p9B1H4EeTcC2SI/5D0=
 github.com/alexwilkerson/ddstats-server v0.6.6 h1:PytSvbKO5Lbd/mReAStrc/60YbhwOz1Gi7vcW9etlLw=
 github.com/alexwilkerson/ddstats-server v0.6.6/go.mod h1:ZyxLt4djhK+JQA5AV+Hov40Q9p9B1H4EeTcC2SI/5D0=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=

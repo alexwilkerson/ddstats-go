@@ -12,7 +12,7 @@ import (
 
 const (
 	// version must be in "X.X.X" order.
-	version        = "0.6.6"
+	version        = "0.6.10"
 	consoleTitle   = "ddstats v" + version
 	v3survivalHash = "569fead87abf4d30fdee4231a6398051"
 	grpcAddr       = "172.104.11.117:80"
