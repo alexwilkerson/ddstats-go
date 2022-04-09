@@ -14,7 +14,7 @@ const (
 	windowName = "Devil Daggers"
 	// baseOffset should be updated if Devil Daggers is ever updated.
 	// This is the offset for "dd.exe" + baseOffset found in Cheat Engine.
-	baseOffset                   = 0x00250DC0
+	baseOffset                   = 0x0024F000
 	persistentConnectionTickRate = time.Second / 60
 )
 
